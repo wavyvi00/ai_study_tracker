@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Study Tracker</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@500&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>AI Study Tracker</h1>
+            <div class="status-badge" id="status-badge">Initializing...</div>
+        </header>
+
+        <!-- Permission Warning -->
+        <div id="permission-warning" class="warning-banner" style="display: none;">
+            <div class="warning-title">⚠️ Screen Recording Permission Required</div>
+            <div class="warning-text">
+                To track your activity, this app needs Screen Recording permission.
+            </div>
+            <div class="warning-steps">
+                <strong>How to grant permission:</strong>
+                <ol>
+                    <li>Open <strong>System Settings</strong></li>
+                    <li>Go to <strong>Privacy & Security</strong> → <strong>Screen Recording</strong></li>
+                    <li>Enable <strong>Terminal</strong> or <strong>Python</strong></li>
+                    <li>Restart this app</li>
+                </ol>
+            </div>
+        </div>
+
+        <main>
+            <!-- Timer Section -->
+            <div class="card timer-card">
+                <div class="timer" id="timer">00:00:00</div>
+                <div class="label">Total Study Time</div>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="stats-grid">
+                <!-- Health -->
+                <div class="card health-card">
+                    <div class="card-header">
+                        <span>Health</span>
+                        <span id="health-text">100%</span>
+                    </div>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill" id="health-bar" style="width: 100%;"></div>
+                    </div>
+                </div>
+
+                <!-- XP & Level -->
+                <div class="card xp-card">
+                    <div class="level-circle">
+                        <span class="level-label">LVL</span>
+                        <span id="level-value">1</span>
+                    </div>
+                    <div class="xp-info">
+                        <div class="xp-value" id="xp-value">0 XP</div>
+                        <div class="label">Experience</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Current App Footer -->
+            <div class="app-footer">
+                <div class="icon">🖥️</div>
+                <div class="app-details">
+                    <div class="app-name" id="app-name">...</div>
+                    <div class="window-title" id="window-title">...</div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+
+</html>
