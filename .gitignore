@@ -1,6 +1,12 @@
 # User data files (dynamic tracking data)
 study_data.json
 
+# PyInstaller build artifacts
+build/
+dist/
+*.spec
+*.app
+
 # Python
 __pycache__/
 *.py[cod]

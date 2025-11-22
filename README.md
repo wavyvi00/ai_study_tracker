@@ -37,7 +37,59 @@ The tracker monitors your active window and classifies your activity as either *
 - **Health regenerates** slowly while studying (+0.1/sec)
 - **Health decreases** when distracted (-0.5/sec)
 
-## 🚀 Getting Started
+## ⚡ Quick Start (No Python Required)
+
+### For Users - Download & Run
+
+1. **Download the standalone app** (when available)
+   - Get `AI Study Tracker.app` from releases
+
+2. **First launch**
+   - Double-click `AI Study Tracker.app`
+   - If macOS blocks it: Right-click → Open
+   - Or: System Settings → Privacy & Security → "Open Anyway"
+
+3. **Grant permissions**
+   - System Settings → Privacy & Security → Screen Recording
+   - Enable Terminal or Python
+   - Restart the app
+
+That's it! No Python installation needed.
+
+---
+
+## 🛠️ For Developers
+
+### Building the Standalone App
+
+Want to build the app yourself? Use the automated build script:
+
+```bash
+./build.sh
+```
+
+This will create `dist/AI Study Tracker.app` - a standalone application bundle.
+
+### Development Setup
+
+```bash
+./setup.sh
+```
+
+This will:
+- Create a virtual environment
+- Install all dependencies
+- Set up the development environment
+
+Then run:
+```bash
+source venv/bin/activate
+python3 desktop_app.py
+```
+
+---
+
+## 🚀 Getting Started (Manual Installation)
 
 ### Prerequisites
 
@@ -47,23 +99,26 @@ The tracker monitors your active window and classifies your activity as either *
 
 ### Installation
 
-1. **Clone the repository**
-   ```bash
-   cd /path/to/ai_study_tracker
-   ```
+**Option A: Automated Setup (Recommended)**
 
-2. **Create and activate virtual environment**
+```bash
+./setup.sh
+```
+
+**Option B: Manual Setup**
+
+1. **Create and activate virtual environment**
    ```bash
    python3 -m venv venv
    source venv/bin/activate
    ```
 
-3. **Install dependencies**
+2. **Install dependencies**
    ```bash
-   pip install flask pywebview pyobjc-framework-Quartz pyobjc-framework-Cocoa
+   pip install -r requirements.txt
    ```
 
-4. **Grant Screen Recording permissions**
+3. **Grant Screen Recording permissions**
    - Open **System Settings**
    - Go to **Privacy & Security** → **Screen Recording**
    - Enable **Terminal** or **Python**
@@ -86,12 +141,17 @@ ai_study_tracker/
 ├── desktop_app.py      # Native desktop window launcher
 ├── tracker.py          # Window tracking and activity classification
 ├── gamification.py     # XP, leveling, and health system
+├── requirements.txt    # Python dependencies
+├── setup.sh            # Development setup script
+├── build.sh            # Standalone app build script
 ├── study_data.json     # Persistent user data (gitignored)
 ├── templates/
 │   └── index.html      # Main UI template
 ├── static/
 │   ├── style.css       # Modern dark theme styling
 │   └── script.js       # Real-time UI updates
+├── dist/               # Built standalone app (gitignored)
+│   └── AI Study Tracker.app
 └── venv/               # Virtual environment (gitignored)
 ```
 
@@ -170,6 +230,12 @@ This file is automatically excluded from version control via `.gitignore`.
 ### Data not persisting
 - **Cause**: Permission issues with `study_data.json`
 - **Fix**: Check file permissions and ensure write access
+
+### macOS blocks the standalone app (Gatekeeper)
+- **Cause**: App is not code-signed
+- **Fix**: Right-click the app → Open (instead of double-clicking)
+- **Alternative**: System Settings → Privacy & Security → Click "Open Anyway"
+- **Note**: This only needs to be done once per app
 
 ## 🛠️ Development
 
