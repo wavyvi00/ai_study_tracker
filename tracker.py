@@ -57,7 +57,6 @@ class WindowTracker:
             
             # Fallback if app_name is unknown or empty (likely permission issue)
             if not app_name or app_name == "Unknown":
-                print("DEBUG: Quartz returned empty app name. Using fallback.")
                 return ("Mock App", "Mock Window - VS Code", False)
                     
             return (app_name, window_title, True)
@@ -68,27 +67,18 @@ class WindowTracker:
             return ("Mock App", "Mock Window - VS Code", False)
 
     def is_study_app(self, app_name, window_title):
-        full_text = (app_name + " " + window_title).lower()
+        """Check if the current app/window is study-related"""
+        combined = f"{app_name} {window_title}".lower()
         
-        print(f"DEBUG: Checking '{full_text}'")
-        
-        # Check distractions first
-        for keyword in self.distraction_keywords:
-            if keyword in full_text:
-                print(f"DEBUG: DISTRACTION detected (keyword: '{keyword}')")
-                return False
-                
-        # Check study keywords
+        # Check for study keywords
         for keyword in self.study_keywords:
-            if keyword in full_text:
-                print(f"DEBUG: STUDY detected (keyword: '{keyword}')")
+            if keyword in combined:
                 return True
-                
-        # Default to neutral/study if not explicitly distracted? 
-        # Or default to distraction? Let's default to distraction for strictness, 
-        # or Study if it's a known tool.
-        # For now, let's assume if it's not a distraction, it's study time 
-        # (or maybe we need a whitelist).
-        # Let's use a simple heuristic: if it's not a distraction, it's study.
-        print(f"DEBUG: No match, defaulting to STUDY")
+        
+        # Check for distraction keywords
+        for keyword in self.distraction_keywords:
+            if keyword in combined:
+                return False
+        
+        # Default to studying if no match
         return True

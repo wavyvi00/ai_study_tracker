@@ -1,5 +1,7 @@
 # User data files (dynamic tracking data)
 study_data.json
+courses.json
+session_history.json
 
 # PyInstaller build artifacts
 build/
