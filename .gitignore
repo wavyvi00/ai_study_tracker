@@ -38,3 +38,7 @@ instance/
 
 # Logs
 *.log
+
+# SSL Certificates (for HTTPS development)
+cert.pem
+key.pem

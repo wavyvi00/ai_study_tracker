@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleName</key>
+    <string>AI Study Tracker</string>
+    <key>CFBundleDisplayName</key>
+    <string>AI Study Tracker</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.focuswin.aistudytracker</string>
+    <key>CFBundleVersion</key>
+    <string>1.0.0</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0.0</string>
+    <key>CFBundleExecutable</key>
+    <string>desktop_app</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>AI Study Tracker uses your microphone to listen to voice commands and interact with the AI assistant.</string>
+    <key>NSCameraUsageDescription</key>
+    <string>AI Study Tracker uses your camera to detect focus levels, posture, and distractions like phone usage.</string>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>LSMinimumSystemVersion</key>
+    <string>10.13</string>
+</dict>
+</plist>

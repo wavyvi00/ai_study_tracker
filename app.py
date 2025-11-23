@@ -10,6 +10,7 @@ from camera_integration import (
     BreakReminder,
     CameraAnalytics
 )
+from voice_assistant import VoiceAssistant
 import threading
 import time
 import os
@@ -27,6 +28,7 @@ game_engine = GamificationEngine()
 course_manager = CourseManager()
 session_history = SessionHistory()
 camera_detector = CameraDetector()
+voice_assistant = VoiceAssistant()
 
 # Initialize camera integration components
 posture_monitor = PostureMonitor(warning_interval_minutes=10)
@@ -121,6 +123,10 @@ def update_loop():
                 # 2. Check if Studying
                 is_studying = tracker.is_study_app(app_name, window_title)
                 
+                # Override if phone detected by camera
+                if camera_status.get('phone_detected', False):
+                    is_studying = False
+                
                 # 3. Update gamification with camera data
                 game_engine.update(is_studying, attention_multiplier, user_present)
                 
@@ -138,6 +144,17 @@ def update_loop():
                 current_state["app_name"] = app_name
                 current_state["window_title"] = window_title
                 current_state["is_studying"] = is_studying
+                
+                # 7. Voice Assistant Feedback
+                # Distracted if: Not studying OR (Camera enabled AND (Phone detected OR Low attention))
+                is_distracted = not is_studying
+                if camera_status['enabled']:
+                    if camera_status.get('phone_detected', False):
+                        is_distracted = True
+                    elif camera_status.get('attention_score', 100) < 40:
+                        is_distracted = True
+                
+                voice_assistant.check_status(is_distracted, is_studying)
                 current_state["has_permissions"] = has_permissions
                 current_state["session_paused"] = game_engine.session_paused
             else:
@@ -282,6 +299,69 @@ def toggle_camera():
 def camera_status():
     """Get current camera status"""
     return jsonify(camera_detector.get_status())
+
+@app.route('/api/camera/calibrate', methods=['POST'])
+def calibrate_camera():
+    """Calibrate camera baseline"""
+    try:
+        success, message = camera_detector.calibrate()
+        return jsonify({
+            'status': 'success' if success else 'error',
+            'message': message
+        })
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/api/speak', methods=['POST'])
+def speak():
+    """Trigger voice assistant to speak text"""
+    try:
+        data = request.json
+        text = data.get('text', '')
+        if text:
+            voice_assistant.speak(text)
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/listen', methods=['POST'])
+def listen():
+    """Process voice commands from frontend"""
+    try:
+        data = request.json
+        text = data.get('text', '').lower()
+        response_text = "I didn't catch that."
+        
+        if 'start' in text:
+            if not game_engine.session_active:
+                # Start normal session
+                course_manager.add_course("Voice Session")
+                game_engine.start_session(mode='normal', course="Voice Session")
+                response_text = "Starting a new study session. Good luck!"
+            else:
+                response_text = "A session is already active."
+                
+        elif 'stop' in text:
+            if game_engine.session_active:
+                game_engine.stop_session()
+                response_text = "Session stopped. Great work!"
+            else:
+                response_text = "No active session to stop."
+                
+        elif 'status' in text or 'doing' in text:
+            xp = game_engine.state['xp']
+            level = game_engine.state['level']
+            response_text = f"You are level {level} with {xp} XP. Keep it up!"
+            
+        elif 'hello' in text or 'hi' in text:
+            response_text = "Hello there! Ready to focus?"
+            
+        # Speak the response
+        voice_assistant.speak(response_text)
+        
+        return jsonify({'response': response_text})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/video_feed')
 def video_feed():

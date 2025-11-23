@@ -5,6 +5,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FocusWin</title>
+
+    <!-- PWA Meta Tags -->
+    <meta name="description" content="AI-powered study tracker with camera detection and voice commands">
+    <meta name="theme-color" content="#8b7355">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="FocusWin">
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@500&display=swap"
@@ -261,7 +270,26 @@
         </main>
     </div>
 
+    <!-- AI Companion -->
+    <div id="ai-companion-container">
+        <div id="speech-bubble" class="speech-bubble">Hello! I am FocusWin.</div>
+        <div id="magic-ball" class="magic-ball">
+            <div class="magic-ball-inner"></div>
+        </div>
+    </div>
+
     <script src="{{ url_for('static', filename='script.js') }}"></script>
+
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/static/sw.js')
+                    .then(reg => console.log('✅ Service Worker registered'))
+                    .catch(err => console.log('❌ Service Worker registration failed:', err));
+            });
+        }
+    </script>
 </body>
 
 </html>

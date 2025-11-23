@@ -27,7 +27,7 @@ def main():
     )
     
     # Start the webview (this blocks until window is closed)
-    webview.start()
+    webview.start(debug=True)
 
 if __name__ == '__main__':
     main()

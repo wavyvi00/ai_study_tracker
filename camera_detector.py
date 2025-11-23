@@ -10,7 +10,16 @@ try:
     HAS_MEDIAPIPE = True
 except ImportError:
     HAS_MEDIAPIPE = False
+    HAS_MEDIAPIPE = False
     print("⚠️ MediaPipe not installed - using basic face detection only")
+
+# YOLO for object detection
+try:
+    from ultralytics import YOLO
+    HAS_YOLO = True
+except ImportError:
+    HAS_YOLO = False
+    print("⚠️ Ultralytics not installed - phone detection disabled")
 
 class CameraDetector:
     """Advanced camera-based detection with pose and gaze tracking"""
@@ -27,6 +36,14 @@ class CameraDetector:
         # Smoothing variables
         self.smoothed_score = 0
         self.alpha = 0.2  # Smoothing factor (lower = smoother)
+        
+        # Calibration data
+        self.calibration_data = {
+            'baseline_pitch': 0,
+            'baseline_yaw': 0,
+            'baseline_roll': 0,
+            'is_calibrated': False
+        }
         
         # Load Haar Cascade for basic face detection
         self.face_cascade = cv2.CascadeClassifier(
@@ -56,10 +73,32 @@ class CameraDetector:
                 min_detection_confidence=0.5,
                 min_tracking_confidence=0.5
             )
+            self.hands = self.mp_hands.Hands(
+                max_num_hands=2,
+                min_detection_confidence=0.5,
+                min_tracking_confidence=0.5
+            )
         else:
             self.face_mesh = None
             self.pose = None
             self.hands = None
+            
+        # Initialize YOLO if available
+        if HAS_YOLO:
+            try:
+                # Load Nano model (fastest)
+                self.yolo_model = YOLO('yolov8n.pt')
+                self.yolo_classes = [67]  # 67 is cell phone in COCO dataset
+                print("✅ YOLOv8 model loaded for phone detection")
+            except Exception as e:
+                print(f"❌ Error loading YOLO model: {e}")
+                self.yolo_model = None
+        else:
+            self.yolo_model = None
+            
+        self.frame_count = 0
+        self.last_phone_detected = False
+        self.phone_bbox = None
         
     def start(self):
         """Start camera capture in background thread"""
@@ -160,6 +199,11 @@ class CameraDetector:
         pose_results = self.pose.process(rgb_frame)
         hand_results = self.hands.process(rgb_frame)
         
+        # Run YOLO detection periodically (every 10 frames ~ 0.3 sec)
+        self.frame_count += 1
+        if self.frame_count % 10 == 0 and self.yolo_model:
+            self._detect_phone_yolo(frame)
+        
         # Calculate attention score with head pose
         attention_score, phone_detected, head_pose = self._calculate_attention_score(face_results, pose_results, hand_results, frame.shape)
         
@@ -211,14 +255,23 @@ class CameraDetector:
             if head_pose:
                 pitch, yaw, roll = head_pose
                 
-                # Check if looking at screen (Pitch: -10 to 10, Yaw: -20 to 20)
-                if -15 < pitch < 15 and -20 < yaw < 20:
+                # Get baseline values
+                base_pitch = self.calibration_data['baseline_pitch']
+                base_yaw = self.calibration_data['baseline_yaw']
+                
+                # Calculate relative angles
+                rel_pitch = pitch - base_pitch
+                rel_yaw = yaw - base_yaw
+                
+                # Check if looking at screen (Relative Pitch: -15 to 15, Relative Yaw: -20 to 20)
+                # We allow a bit more range when calibrated
+                if -20 < rel_pitch < 20 and -25 < rel_yaw < 25:
                     score += 50
-                # Penalty for looking down (Pitch < -15)
-                elif pitch < -15:
+                # Penalty for looking down (Relative Pitch < -20)
+                elif rel_pitch < -20:
                     score = max(0, score - 20)
-                # Penalty for looking sideways (Yaw > 20 or < -20)
-                elif abs(yaw) > 20:
+                # Penalty for looking sideways (Relative Yaw > 25 or < -25)
+                elif abs(rel_yaw) > 25:
                     score = max(0, score - 20)
             else:
                 # Fallback to simple check if pose calculation fails
@@ -234,10 +287,21 @@ class CameraDetector:
         if face_results.multi_face_landmarks:
             score += 20
             
-        # Check for phone usage (hands near face)
-        if hand_results.multi_hand_landmarks and face_results.multi_face_landmarks:
+        # Eyes visible (20 points)
+        if face_results.multi_face_landmarks:
+            score += 20
+            
+        # Check for phone usage (YOLO + Hand Heuristic fallback)
+        phone_detected = False
+        
+        # Priority 1: YOLO Detection
+        if self.last_phone_detected:
+            score = max(0, score - 50)
+            phone_detected = True
+        # Priority 2: Hand Heuristic (only if YOLO not available/failed)
+        elif not self.yolo_model and hand_results.multi_hand_landmarks and face_results.multi_face_landmarks:
             if self._is_using_phone(hand_results.multi_hand_landmarks, face_results.multi_face_landmarks[0]):
-                score = max(0, score - 50)  # Penalty for phone usage
+                score = max(0, score - 50)
                 phone_detected = True
         
         return min(100, score), phone_detected, head_pose
@@ -371,6 +435,34 @@ class CameraDetector:
             return False
         pitch, yaw, roll = head_pose
         return -15 < pitch < 15 and -20 < yaw < 20
+        
+    def _detect_phone_yolo(self, frame):
+        """Run YOLO inference to detect phones"""
+        try:
+            results = self.yolo_model(frame, classes=self.yolo_classes, verbose=False)
+            
+            detected = False
+            bbox = None
+            
+            for result in results:
+                boxes = result.boxes
+                for box in boxes:
+                    conf = float(box.conf[0])
+                    if conf > 0.3:  # Lowered threshold for better detection
+                        detected = True
+                        # Get bbox for drawing
+                        x1, y1, x2, y2 = box.xyxy[0].tolist()
+                        bbox = (int(x1), int(y1), int(x2), int(y2))
+                        break
+                if detected:
+                    break
+            
+            self.last_phone_detected = detected
+            self.phone_bbox = bbox
+            
+        except Exception as e:
+            print(f"YOLO detection error: {e}")
+            self.last_phone_detected = False
 
     def _draw_debug_info(self, frame, face_landmarks, pose_landmarks, head_pose, score, phone_detected):
         """Draw debug overlays on frame"""
@@ -398,9 +490,14 @@ class CameraDetector:
             color = (0, 255, 0) if score > 60 else (0, 0, 255)
             cv2.putText(frame, f"Score: {score}", (10, 130), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
             
-            # Draw Phone Status
+            # Draw Phone Status & BBox
             if phone_detected:
                 cv2.putText(frame, "PHONE DETECTED", (10, 170), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 3)
+                
+                if self.phone_bbox:
+                    x1, y1, x2, y2 = self.phone_bbox
+                    cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 2)
+                    cv2.putText(frame, "Cell Phone", (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
                 
         except Exception as e:
             print(f"Debug draw error: {e}")
@@ -409,13 +506,26 @@ class CameraDetector:
         """Generator for video streaming"""
         while True:
             with self.lock:
-                if self.debug_frame is None:
-                    time.sleep(0.1)
+                try:
+                    # Validate frame
+                    if self.debug_frame is None or self.debug_frame.size == 0:
+                        time.sleep(0.1)
+                        continue
+                        
+                    # Ensure uint8
+                    if self.debug_frame.dtype != np.uint8:
+                        self.debug_frame = self.debug_frame.astype(np.uint8)
+                    
+                    # Encode frame to JPEG
+                    ret, buffer = cv2.imencode('.jpg', self.debug_frame)
+                    if not ret:
+                        continue
+                    frame = buffer.tobytes()
+                except Exception as e:
+                    # Only print error once per second to avoid spam
+                    if time.time() % 1 < 0.1:
+                        print(f"Frame encoding error: {e}")
                     continue
-                
-                # Encode frame to JPEG
-                ret, buffer = cv2.imencode('.jpg', self.debug_frame)
-                frame = buffer.tobytes()
             
             # Yield frame
             yield (b'--frame\r\n'
@@ -423,6 +533,22 @@ class CameraDetector:
             
             # Limit FPS to ~30 to save resources
             time.sleep(0.033)
+            
+    def calibrate(self):
+        """Set current head pose as the baseline for 'focused' state"""
+        if not self.last_detection or not self.last_detection.get('head_pose'):
+            return False, "No head pose detected. Please look at the camera."
+            
+        pitch, yaw, roll = self.last_detection['head_pose']
+        
+        self.calibration_data = {
+            'baseline_pitch': pitch,
+            'baseline_yaw': yaw,
+            'baseline_roll': roll,
+            'is_calibrated': True
+        }
+        
+        return True, "Calibration successful! Current position set as baseline."
     
     def get_status(self):
         """Get current detection status"""
@@ -455,6 +581,7 @@ class CameraDetector:
             'method': self.last_detection.get('method', 'basic'),
             'method': self.last_detection.get('method', 'basic'),
             'phone_detected': self.last_detection.get('phone_detected', False),
+            'is_calibrated': self.calibration_data['is_calibrated'],
             'message': self._get_status_message(self.last_detection)
         }
     
