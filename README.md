@@ -1,15 +1,16 @@
-# 🧠 AI Study Tracker
+# FocusWin 🎯
 
-A gamified productivity tracker that monitors your computer activity and rewards you for staying focused. Built with Flask, Python, and native macOS integration.
+A gamified productivity tracker that helps you stay focused and level up your study sessions with RPG-style mechanics.
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue)
 ![Platform](https://img.shields.io/badge/platform-macOS-lightgrey)
 ![Python](https://img.shields.io/badge/python-3.8+-green)
 
-## ✨ Features
+## Features
 
-- **🎮 Gamification System**: Earn XP, level up, and maintain your health by staying focused
-- **📊 Real-time Activity Tracking**: Automatically detects what application you're using
+- **Gamification System**: Earn XP, level up, and maintain health based on your focus
+- **Daily Streaks**: Build consecutive study days with bonus XP rewards
+- **Challenge Mode**: Set timed focus challenges with specific durations
 - **💚 Health System**: Your health decreases when distracted and regenerates while studying
 - **⏱️ Study Timer**: Tracks total study time with a clean, formatted display
 - **🖥️ Native Desktop App**: Beautiful native window using pywebview

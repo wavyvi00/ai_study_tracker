@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Study Tracker</title>
+    <title>FocusWin</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@500&display=swap"
@@ -14,7 +14,8 @@
 <body>
     <div class="container">
         <header>
-            <h1>AI Study Tracker</h1>
+            <h1>FocusWin</h1>
+            <p class="subtitle">Level up your focus 🎯</p>
             <div class="status-badge" id="status-badge">Initializing...</div>
         </header>
 
@@ -77,6 +78,15 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Streak Display -->
+                <div class="streak-badge" id="streak-badge" style="display: none;">
+                    <span class="streak-icon">🔥</span>
+                    <span class="streak-text">
+                        <span id="streak-count">0</span> Day Streak!
+                    </span>
+                </div>
+
                 <!-- Course Input -->
                 <div class="course-input-container">
                     <label for="course-input" class="course-label">Course Name</label>
@@ -110,8 +120,72 @@
                 </div>
             </div>
 
-            <!-- Session View (shown during active session) -->
-            <div id="session-view" style="display: none;">
+            <!-- Active Session View (shown when session is active) -->
+            <div id="active-session" style="display: none;">
+                <!-- Session Results Overlay (appears on top when session ends) -->
+                <div id="session-results" class="results-overlay" style="display: none;">
+                    <div class="results-card">
+                        <div class="results-title">Session Complete! 🎉</div>
+
+                        <div class="results-course">
+                            <span id="results-course-name"></span>
+                        </div>
+
+                        <div class="results-stats">
+                            <div class="result-stat">
+                                <div class="result-icon">⏱️</div>
+                                <div class="result-value" id="results-duration">0m</div>
+                                <div class="result-label">Study Time</div>
+                            </div>
+                            <div class="result-stat">
+                                <div class="result-icon">⭐</div>
+                                <div class="result-value" id="results-xp">+0 XP</div>
+                                <div class="result-label">XP Earned</div>
+                            </div>
+                        </div>
+
+                        <!-- Streak Bonus Display -->
+                        <div id="streak-bonus-display" class="streak-bonus-display" style="display: none;">
+                            <div class="streak-bonus-content">
+                                <span class="streak-bonus-icon">🔥</span>
+                                <div class="streak-bonus-text">
+                                    <div class="streak-bonus-title"><span id="results-streak">0</span> Day Streak Bonus!
+                                    </div>
+                                    <div class="streak-bonus-breakdown">
+                                        Base: <span id="results-base-xp">0</span> XP + Bonus: <span
+                                            id="results-streak-bonus">0</span> XP
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="level-up-banner" class="level-up-banner" style="display: none;">
+                            <div class="level-up-text">LEVEL UP!</div>
+                            <div class="level-up-levels">
+                                <span id="old-level">1</span> → <span id="new-level">2</span>
+                            </div>
+                        </div>
+
+                        <div class="xp-progress-display">
+                            <div class="results-level-xp-container">
+                                <div class="results-level-badge">
+                                    <div class="results-level-label">LEVEL</div>
+                                    <div class="results-level-number" id="results-current-level">1</div>
+                                </div>
+                                <div class="results-xp-bar-container">
+                                    <div class="results-xp-text">
+                                        <span id="results-xp-current">0</span> / <span id="results-xp-next">100</span>
+                                        XP
+                                    </div>
+                                    <div class="xp-progress-bar-results">
+                                        <div class="xp-progress-fill-results" id="results-xp-fill"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <button class="continue-btn" onclick="dismissResults()">Continue</button>
+                    </div>
+                </div>
+
                 <!-- Session Controls -->
                 <div class="session-controls">
                     <div class="session-info">

@@ -54,15 +54,20 @@ def update_loop():
                 # 2. Check if Studying
                 is_studying = tracker.is_study_app(app_name, window_title)
                 
-                # 3. Update Game Engine
+                # 3. Update gamification
                 game_engine.update(is_studying)
                 
-                # 4. Check if challenge mode session is complete
+                # 4. Check if health depleted (auto-fail session)
+                if game_engine.is_health_depleted():
+                    print("Health depleted! Session failed.")
+                    game_engine.stop_session()
+                
+                # 5. Check if challenge mode session is complete
                 if game_engine.is_session_complete():
                     print("Challenge mode session complete! Auto-stopping.")
                     game_engine.stop_session()
                 
-                # 5. Update Global State
+                # 6. Update Global State
                 current_state["app_name"] = app_name
                 current_state["window_title"] = window_title
                 current_state["is_studying"] = is_studying
@@ -90,6 +95,8 @@ def update_loop():
             current_state["current_course"] = game_engine.current_course
             current_state["courses"] = course_manager.get_courses()
             current_state["total_sessions"] = session_history.get_total_sessions()
+            current_state["current_streak"] = game_engine.current_streak
+            current_state["best_streak"] = game_engine.best_streak
             
         except Exception as e:
             print(f"Error in update loop: {e}")
@@ -127,7 +134,8 @@ def start_session():
         if course:
             course_manager.add_course(course)
         
-        game_engine.start_session(mode, duration, course)
+        # Start session with correct parameter order: mode, course, duration
+        game_engine.start_session(mode=mode, course=course, duration=duration)
         return jsonify({"success": True, "mode": mode, "duration": duration, "course": course})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -150,7 +158,11 @@ def stop_session():
                 end_time=session_data['end_time']
             )
         
-        return jsonify({"success": True})
+        # Return session results for results screen
+        return jsonify({
+            "success": True,
+            "results": session_data if session_data else None
+        })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

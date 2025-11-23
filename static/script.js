@@ -79,11 +79,236 @@ function stopSession() {
     })
         .then(response => response.json())
         .then(data => {
-            if (data.success) {
-                console.log('Session stopped');
+            if (data.success && data.results) {
+                showResults(data.results);
             }
         })
         .catch(error => console.error('Error stopping session:', error));
+}
+
+function showResults(results) {
+    // Check if health failed
+    if (results.health_failed) {
+        showHealthFailed(results);
+        return;
+    }
+
+    // Check if challenge failed
+    if (results.challenge_failed) {
+        showChallengeFailed(results);
+        return;
+    }
+
+    // Populate results data
+    document.getElementById('results-course-name').textContent = results.course || 'Study Session';
+
+    // Format duration
+    const minutes = Math.floor(results.duration_seconds / 60);
+    const seconds = results.duration_seconds % 60;
+    document.getElementById('results-duration').textContent =
+        minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+
+    // Show results overlay first
+    document.getElementById('session-results').style.display = 'flex';
+
+    // Animate XP counter from 0 to earned amount
+    const xpElement = document.getElementById('results-xp');
+    animateCounter(xpElement, 0, results.xp_earned, 1500, '+', ' XP');
+
+    // Show streak bonus if applicable
+    if (results.streak_bonus && results.streak_bonus > 0) {
+        document.getElementById('streak-bonus-display').style.display = 'block';
+        document.getElementById('results-streak').textContent = results.current_streak;
+        document.getElementById('results-base-xp').textContent = results.base_xp;
+        document.getElementById('results-streak-bonus').textContent = results.streak_bonus;
+    } else {
+        document.getElementById('streak-bonus-display').style.display = 'none';
+    }
+
+    // XP progress bar - calculate and animate
+    const xpInCurrentLevel = results.new_xp % 100;
+    const xpProgress = (xpInCurrentLevel / 100) * 100;
+
+    // Set current level in badge
+    document.getElementById('results-current-level').textContent = results.new_level;
+
+    // Set initial XP values to 0
+    document.getElementById('results-xp-current').textContent = 0;
+    document.getElementById('results-xp-next').textContent = 100;
+
+    // Animate XP counter
+    const xpCurrentElement = document.getElementById('results-xp-current');
+    setTimeout(() => {
+        animateCounter(xpCurrentElement, 0, xpInCurrentLevel, 1200, '', '');
+    }, 500);
+
+    // Animate XP bar after a delay
+    setTimeout(() => {
+        document.getElementById('results-xp-fill').style.width = `${xpProgress}%`;
+    }, 800);
+
+    // Show level-up banner with animation if leveled up
+    if (results.levels_gained > 0) {
+        setTimeout(() => {
+            const banner = document.getElementById('level-up-banner');
+            banner.style.display = 'block';
+            document.getElementById('old-level').textContent = results.old_level;
+            document.getElementById('new-level').textContent = results.new_level;
+
+            // Add extra animation class
+            banner.classList.add('level-up-animate');
+            setTimeout(() => {
+                banner.classList.remove('level-up-animate');
+            }, 1000);
+        }, 1200);
+    } else {
+        document.getElementById('level-up-banner').style.display = 'none';
+    }
+}
+
+// Animate a number counter
+function animateCounter(element, start, end, duration, prefix = '', suffix = '') {
+    const startTime = performance.now();
+    const range = end - start;
+
+    function update(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+
+        // Easing function for smooth animation
+        const easeOutQuart = 1 - Math.pow(1 - progress, 4);
+        const current = Math.floor(start + (range * easeOutQuart));
+
+        element.textContent = `${prefix}${current}${suffix}`;
+
+        if (progress < 1) {
+            requestAnimationFrame(update);
+        } else {
+            element.textContent = `${prefix}${end}${suffix}`;
+        }
+    }
+
+    requestAnimationFrame(update);
+}
+
+function dismissResults() {
+    // Hide the results overlay
+    const resultsOverlay = document.getElementById('session-results');
+    if (resultsOverlay) {
+        resultsOverlay.style.display = 'none';
+    }
+    // Reset XP bar for next time
+    document.getElementById('results-xp-fill').style.width = '0%';
+
+    // Reset title to default
+    const title = document.querySelector('.results-title');
+    title.textContent = 'Session Complete! 🎉';
+    title.style.background = 'linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))';
+    title.style.webkitBackgroundClip = 'text';
+    title.style.webkitTextFillColor = 'transparent';
+
+    // Show XP progress display again
+    document.querySelector('.xp-progress-display').style.display = 'block';
+
+    // Hide failure message if it exists
+    const failureMsg = document.getElementById('failure-message');
+    if (failureMsg) {
+        failureMsg.style.display = 'none';
+    }
+
+    // Switch back to mode selection
+    document.getElementById('active-session').style.display = 'none';
+    document.getElementById('mode-selection').style.display = 'block';
+}
+
+function showChallengeFailed(results) {
+    // Show results overlay
+    document.getElementById('session-results').style.display = 'flex';
+
+    // Change title to "Challenge Failed"
+    const title = document.querySelector('.results-title');
+    title.textContent = 'Challenge Failed 😔';
+    title.style.background = 'linear-gradient(135deg, #c17a5c, #a8956b)';
+    title.style.webkitBackgroundClip = 'text';
+    title.style.webkitTextFillColor = 'transparent';
+
+    // Show course name
+    document.getElementById('results-course-name').textContent = results.course || 'Study Session';
+
+    // Format times
+    const completedMins = Math.floor(results.duration_seconds / 60);
+    const completedSecs = results.duration_seconds % 60;
+    const requiredMins = Math.floor(results.challenge_duration / 60);
+
+    // Update duration to show what was completed
+    document.getElementById('results-duration').textContent =
+        `${completedMins}m ${completedSecs}s / ${requiredMins}m`;
+
+    // Show 0 XP earned
+    document.getElementById('results-xp').textContent = '+0 XP';
+
+    // Hide level-up banner
+    document.getElementById('level-up-banner').style.display = 'none';
+
+    // Hide XP progress display
+    document.querySelector('.xp-progress-display').style.display = 'none';
+
+    // Add failure message
+    const resultsCard = document.querySelector('.results-card');
+    let failureMsg = document.getElementById('failure-message');
+    if (!failureMsg) {
+        failureMsg = document.createElement('div');
+        failureMsg.id = 'failure-message';
+        failureMsg.className = 'failure-message';
+        failureMsg.innerHTML = '💪 Don\'t give up! Try again and complete the full challenge to earn XP.';
+        resultsCard.insertBefore(failureMsg, document.querySelector('.continue-btn'));
+    }
+    failureMsg.style.display = 'block';
+}
+
+function showHealthFailed(results) {
+    // Show results overlay
+    document.getElementById('session-results').style.display = 'flex';
+
+    // Change title to "Health Depleted"
+    const title = document.querySelector('.results-title');
+    title.textContent = 'Health Depleted! 💔';
+    title.style.background = 'linear-gradient(135deg, #c17a5c, #8b7355)';
+    title.style.webkitBackgroundClip = 'text';
+    title.style.webkitTextFillColor = 'transparent';
+
+    // Show course name
+    document.getElementById('results-course-name').textContent = results.course || 'Study Session';
+
+    // Format duration
+    const minutes = Math.floor(results.duration_seconds / 60);
+    const seconds = results.duration_seconds % 60;
+    document.getElementById('results-duration').textContent =
+        minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+
+    // Show 0 XP earned
+    document.getElementById('results-xp').textContent = '+0 XP';
+
+    // Hide level-up banner
+    document.getElementById('level-up-banner').style.display = 'none';
+
+    // Hide XP progress display
+    document.querySelector('.xp-progress-display').style.display = 'none';
+
+    // Hide streak bonus
+    document.getElementById('streak-bonus-display').style.display = 'none';
+
+    // Add failure message
+    const resultsCard = document.querySelector('.results-card');
+    let failureMsg = document.getElementById('failure-message');
+    if (!failureMsg) {
+        failureMsg = document.createElement('div');
+        failureMsg.id = 'failure-message';
+        failureMsg.className = 'failure-message';
+        resultsCard.insertBefore(failureMsg, document.querySelector('.continue-btn'));
+    }
+    failureMsg.innerHTML = '💔 Too many distractions! Stay focused to maintain your health and earn XP.';
+    failureMsg.style.display = 'block';
 }
 
 function formatTime(seconds) {
@@ -101,21 +326,26 @@ function updateStatus() {
         .then(data => {
             // Toggle between mode selection and session view
             const modeSelection = document.getElementById('mode-selection');
-            const sessionView = document.getElementById('session-view');
+            const resultsOverlay = document.getElementById('session-results');
 
+            // Don't switch views if results are being shown
+            const resultsVisible = resultsOverlay && resultsOverlay.style.display === 'flex';
+
+            // Toggle views
             if (data.session_active) {
                 modeSelection.style.display = 'none';
-                sessionView.style.display = 'block';
+                document.getElementById('active-session').style.display = 'block';
                 sessionWasActive = true;
-            } else {
+            } else if (!resultsVisible) {
+                // Only switch to mode selection if results aren't showing
+                // This prevents switching away when health fails or challenge fails
                 modeSelection.style.display = 'block';
-                sessionView.style.display = 'none';
-
-                // Show completion message if session just ended
-                if (sessionWasActive && !lastSessionComplete) {
-                    // Session was just stopped
-                    sessionWasActive = false;
-                }
+                document.getElementById('active-session').style.display = 'none';
+                sessionWasActive = false;
+            } else {
+                // Results are showing but session ended - keep session view visible
+                // so results overlay can be seen
+                document.getElementById('active-session').style.display = 'block';
             }
 
             // Update mode indicator
@@ -194,6 +424,21 @@ function updateStatus() {
                 const dashboardSessions = document.getElementById('dashboard-sessions');
                 if (dashboardSessions) {
                     dashboardSessions.textContent = data.total_sessions || 0;
+                }
+
+                // Streak display
+                if (data.current_streak && data.current_streak > 0) {
+                    const streakBadge = document.getElementById('streak-badge');
+                    const streakCount = document.getElementById('streak-count');
+                    if (streakBadge && streakCount) {
+                        streakCount.textContent = data.current_streak;
+                        streakBadge.style.display = 'flex';
+                    }
+                } else {
+                    const streakBadge = document.getElementById('streak-badge');
+                    if (streakBadge) {
+                        streakBadge.style.display = 'none';
+                    }
                 }
             }
 

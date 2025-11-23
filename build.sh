@@ -33,7 +33,7 @@ rm -rf build dist *.spec
 # Build the app with PyInstaller
 echo "🔨 Building application bundle..."
 pyinstaller \
-    --name "AI Study Tracker" \
+    --name "FocusWin" \
     --windowed \
     --onedir \
     --add-data "templates:templates" \
