@@ -16,6 +16,20 @@
         <header>
             <h1>FocusWin</h1>
             <p class="subtitle">Level up your focus 🎯</p>
+
+            <!-- Camera Controls -->
+            <div class="camera-controls">
+                <label class="camera-toggle">
+                    <input type="checkbox" id="camera-checkbox" onchange="toggleCamera()">
+                    <span class="toggle-slider"></span>
+                    <span class="toggle-label">📹 Camera Detection</span>
+                </label>
+                <div id="camera-status" class="camera-status" style="display: none;">
+                    <span class="status-indicator"></span>
+                    <span id="camera-status-text">Initializing...</span>
+                </div>
+            </div>
+
             <div class="status-badge" id="status-badge">Initializing...</div>
         </header>
 

@@ -1,5 +1,5 @@
 Flask==3.0.0
-pywebview==5.0.5
-pyobjc-framework-Quartz==10.1
-pyobjc-framework-Cocoa==10.1
+pywebview==4.4.1
+opencv-python==4.10.0.84
+mediapipe==0.10.9
 pyinstaller==6.3.0

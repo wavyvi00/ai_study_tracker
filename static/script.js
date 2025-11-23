@@ -600,3 +600,74 @@ function setupCourseAutocomplete() {
 
 // Initialize autocomplete when page loads
 setupCourseAutocomplete();
+// Camera Controls
+let cameraEnabled = false;
+let cameraStatusInterval = null;
+
+async function toggleCamera() {
+    const checkbox = document.getElementById('camera-checkbox');
+    cameraEnabled = checkbox.checked;
+
+    try {
+        const response = await fetch('/api/camera/toggle', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ enabled: cameraEnabled })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            updateCameraDisplay(data.enabled);
+        } else {
+            console.error('Failed to toggle camera');
+            checkbox.checked = !cameraEnabled;
+        }
+    } catch (error) {
+        console.error('Camera toggle error:', error);
+        checkbox.checked = !cameraEnabled;
+    }
+}
+
+function updateCameraDisplay(enabled) {
+    const statusDiv = document.getElementById('camera-status');
+    const statusText = document.getElementById('camera-status-text');
+
+    if (enabled) {
+        statusDiv.style.display = 'flex';
+        statusText.textContent = 'Camera Active';
+        startCameraStatusPolling();
+    } else {
+        statusDiv.style.display = 'none';
+        stopCameraStatusPolling();
+    }
+}
+
+function startCameraStatusPolling() {
+    cameraStatusInterval = setInterval(async () => {
+        try {
+            const response = await fetch('/api/camera/status');
+            const data = await response.json();
+
+            if (data.enabled) {
+                const statusText = document.getElementById('camera-status-text');
+                if (data.present === true) {
+                    statusText.textContent = '✅ User Present';
+                } else if (data.present === false) {
+                    statusText.textContent = '⚠️ User Away';
+                } else {
+                    statusText.textContent = 'Detecting...';
+                }
+            }
+        } catch (error) {
+            console.error('Camera status error:', error);
+        }
+    }, 2000);
+}
+
+function stopCameraStatusPolling() {
+    if (cameraStatusInterval) {
+        clearInterval(cameraStatusInterval);
+        cameraStatusInterval = null;
+    }
+}

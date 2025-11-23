@@ -165,6 +165,104 @@ h1 {
     color: var(--text-secondary);
 }
 
+/* Camera Controls */
+.camera-controls {
+    margin: 1rem 0 0.75rem 0;
+    padding: 0.75rem;
+    background: linear-gradient(135deg, rgba(156, 175, 136, 0.06), rgba(168, 149, 107, 0.06));
+    border-radius: 0.75rem;
+    border: 1px solid rgba(139, 115, 85, 0.12);
+}
+
+.camera-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    user-select: none;
+}
+
+.camera-toggle input[type="checkbox"] {
+    display: none;
+}
+
+.toggle-slider {
+    position: relative;
+    width: 36px;
+    height: 20px;
+    background: rgba(139, 115, 85, 0.2);
+    border-radius: 10px;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(139, 115, 85, 0.3);
+    flex-shrink: 0;
+}
+
+.toggle-slider::before {
+    content: '';
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: white;
+    top: 2px;
+    left: 2px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.camera-toggle input:checked+.toggle-slider {
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+}
+
+.camera-toggle input:checked+.toggle-slider::before {
+    transform: translateX(16px);
+}
+
+.toggle-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.camera-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    padding: 0.4rem 0.6rem;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 0.4rem;
+    font-size: 0.8rem;
+}
+
+.status-indicator {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent-green);
+    animation: pulse 2s ease-in-out infinite;
+    flex-shrink: 0;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.6;
+        transform: scale(1.2);
+    }
+}
+
+#camera-status-text {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
 /* Stats Grid */
 .stats-grid {
     display: grid;

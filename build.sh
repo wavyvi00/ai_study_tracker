@@ -24,7 +24,7 @@ source venv/bin/activate
 # Install/upgrade dependencies
 echo "📥 Installing build dependencies..."
 pip install --upgrade pip
-pip install -r requirements.txt
+pip install -r requirements-macos.txt
 
 # Clean previous builds
 echo "🧹 Cleaning previous builds..."

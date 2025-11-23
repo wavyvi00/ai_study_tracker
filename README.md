@@ -3,19 +3,56 @@
 A gamified productivity tracker that helps you stay focused and level up your study sessions with RPG-style mechanics.
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue)
-![Platform](https://img.shields.io/badge/platform-macOS-lightgrey)
+![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey)
 ![Python](https://img.shields.io/badge/python-3.8+-green)
 
-## Features
+## ✨ Features
 
 - **Gamification System**: Earn XP, level up, and maintain health based on your focus
 - **Daily Streaks**: Build consecutive study days with bonus XP rewards
 - **Challenge Mode**: Set timed focus challenges with specific durations
 - **💚 Health System**: Your health decreases when distracted and regenerates while studying
 - **⏱️ Study Timer**: Tracks total study time with a clean, formatted display
-- **🖥️ Native Desktop App**: Beautiful native window using pywebview
+- **📹 Camera Detection**: AI-powered attention tracking using computer vision
+- **👀 Gaze Tracking**: Detects if you're looking at the screen (MediaPipe)
+- **🧍 Posture Analysis**: Monitors sitting posture for better focus
+- **🖥️ Native Desktop App**: Beautiful native window on macOS and Windows
 - **🎨 Modern UI**: Sleek dark mode interface with smooth animations
 - **🔒 Privacy-First**: All data stored locally in `study_data.json`
+
+---
+
+## 🚀 Quick Start
+
+### macOS
+
+**Development Mode:**
+```bash
+./setup.sh
+source venv/bin/activate
+python3 desktop_app.py
+```
+
+**Build Standalone App:**
+```bash
+./build.sh
+# Creates: dist/FocusWin.app
+```
+
+### Windows
+
+**Development Mode:**
+```batch
+setup-windows.bat
+venv\Scripts\activate.bat
+python desktop_app.py
+```
+
+**Build Standalone App:**
+```batch
+build-windows.bat
+REM Creates: dist\FocusWin\FocusWin.exe
+```
 
 ## 🎯 How It Works
 
@@ -94,32 +131,59 @@ python3 desktop_app.py
 
 ### Prerequisites
 
-- macOS (uses Quartz for window tracking)
+**macOS:**
+- macOS 10.14 or higher
 - Python 3.8 or higher
-- Screen Recording permissions (required for window tracking)
+- Screen Recording permissions (for window tracking)
+
+**Windows:**
+- Windows 10 or higher
+- Python 3.8 or higher
+- No special permissions required
 
 ### Installation
 
 **Option A: Automated Setup (Recommended)**
 
+**macOS:**
 ```bash
 ./setup.sh
+```
+
+**Windows:**
+```batch
+setup-windows.bat
 ```
 
 **Option B: Manual Setup**
 
 1. **Create and activate virtual environment**
+   
+   **macOS/Linux:**
    ```bash
    python3 -m venv venv
    source venv/bin/activate
    ```
-
-2. **Install dependencies**
-   ```bash
-   pip install -r requirements.txt
+   
+   **Windows:**
+   ```batch
+   python -m venv venv
+   venv\Scripts\activate.bat
    ```
 
-3. **Grant Screen Recording permissions**
+2. **Install dependencies**
+   
+   **macOS:**
+   ```bash
+   pip install -r requirements-macos.txt
+   ```
+   
+   **Windows:**
+   ```batch
+   pip install -r requirements-windows.txt
+   ```
+
+3. **Grant permissions (macOS only)**
    - Open **System Settings**
    - Go to **Privacy & Security** → **Screen Recording**
    - Enable **Terminal** or **Python**
@@ -137,23 +201,32 @@ The app will launch in a native window at `http://127.0.0.1:5002`
 ## 📁 Project Structure
 
 ```
-ai_study_tracker/
-├── app.py              # Flask application and API routes
-├── desktop_app.py      # Native desktop window launcher
-├── tracker.py          # Window tracking and activity classification
-├── gamification.py     # XP, leveling, and health system
-├── requirements.txt    # Python dependencies
-├── setup.sh            # Development setup script
-├── build.sh            # Standalone app build script
-├── study_data.json     # Persistent user data (gitignored)
+focuswin/
+├── app.py                    # Flask application and API routes
+├── desktop_app.py            # Native desktop window launcher
+├── tracker.py                # Cross-platform window tracking
+├── gamification.py           # XP, leveling, and health system
+├── camera_detector.py        # Camera-based attention detection
+├── courses.py                # Course management
+├── session_history.py        # Session tracking
+├── requirements.txt          # Common dependencies
+├── requirements-macos.txt    # macOS-specific dependencies
+├── requirements-windows.txt  # Windows-specific dependencies
+├── setup.sh                  # macOS setup script
+├── setup-windows.bat         # Windows setup script
+├── build.sh                  # macOS build script
+├── build-windows.bat         # Windows build script
+├── study_data.json           # Persistent user data (gitignored)
 ├── templates/
-│   └── index.html      # Main UI template
+│   └── index.html            # Main UI template
 ├── static/
-│   ├── style.css       # Modern dark theme styling
-│   └── script.js       # Real-time UI updates
-├── dist/               # Built standalone app (gitignored)
-│   └── AI Study Tracker.app
-└── venv/               # Virtual environment (gitignored)
+│   ├── style.css             # Earthy theme styling
+│   └── script.js             # Real-time UI updates
+├── dist/                     # Built apps (gitignored)
+│   ├── FocusWin.app          # macOS app
+│   └── FocusWin/             # Windows app folder
+│       └── FocusWin.exe
+└── venv/                     # Virtual environment (gitignored)
 ```
 
 ## 🔧 Configuration
@@ -272,15 +345,21 @@ Then open `http://127.0.0.1:5001` in your browser.
 
 ## 📝 Future Enhancements
 
-Potential features to add:
+**Completed:**
+- [x] Daily streak tracking and rewards
+- [x] Multi-platform support (macOS and Windows)
+- [x] Camera-based attention detection
+- [x] Pose and gaze tracking
+
+**Planned:**
 - [ ] Daily/weekly statistics dashboard
-- [ ] Streak tracking and rewards
 - [ ] Custom study goals and milestones
 - [ ] Break reminders and Pomodoro integration
 - [ ] Export data to CSV/JSON
-- [ ] Multi-platform support (Windows, Linux)
 - [ ] Achievements and badges system
 - [ ] Focus mode with website blocking
+- [ ] Phone detection (YOLO)
+- [ ] ML-based personalized learning
 
 ## 🤝 Contributing
 
@@ -295,8 +374,12 @@ This project is open source and available for personal use.
 - Built with [Flask](https://flask.palletsprojects.com/)
 - Native window via [pywebview](https://pywebview.flowrl.com/)
 - macOS integration using [PyObjC](https://pyobjc.readthedocs.io/)
+- Windows integration using [pywin32](https://github.com/mhammond/pywin32)
+- Computer vision with [OpenCV](https://opencv.org/)
+- Pose/gaze tracking with [MediaPipe](https://mediapipe.dev/)
 - UI fonts: [Inter](https://rsms.me/inter/) & [JetBrains Mono](https://www.jetbrains.com/lp/mono/)
 
 ---
 
 **Stay focused, level up, and achieve your goals! 🚀**
+```

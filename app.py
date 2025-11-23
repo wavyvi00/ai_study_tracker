@@ -3,6 +3,7 @@ from tracker import WindowTracker
 from gamification import GamificationEngine
 from courses import CourseManager
 from session_history import SessionHistory
+from camera_detector import CameraDetector
 import threading
 import time
 import os
@@ -19,6 +20,7 @@ tracker = WindowTracker()
 game_engine = GamificationEngine()
 course_manager = CourseManager()
 session_history = SessionHistory()
+camera_detector = CameraDetector()
 
 # Global State
 current_state = {
@@ -178,6 +180,35 @@ def get_history():
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@app.route('/api/camera/toggle', methods=['POST'])
+def toggle_camera():
+    """Toggle camera on/off"""
+    try:
+        data = request.json
+        enabled = data.get('enabled', False)
+        
+        if enabled:
+            success = camera_detector.start()
+        else:
+            camera_detector.stop()
+            success = True
+        
+        return jsonify({
+            'success': success,
+            'enabled': camera_detector.enabled
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/camera/status', methods=['GET'])
+def camera_status():
+    """Get camera detection status"""
+    try:
+        status = camera_detector.get_status()
+        return jsonify(status)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, port=5001)

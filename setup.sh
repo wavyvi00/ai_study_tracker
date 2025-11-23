@@ -33,7 +33,7 @@ pip install --upgrade pip
 
 # Install dependencies
 echo "📥 Installing dependencies..."
-pip install -r requirements.txt
+pip install -r requirements-macos.txt
 
 echo ""
 echo "✅ Setup complete!"
