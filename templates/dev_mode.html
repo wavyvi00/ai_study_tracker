@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Study Tracker - Dev Mode</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            display: flex;
+            gap: 20px;
+            max-width: 1200px;
+            width: 100%;
+        }
+        .video-container {
+            flex: 2;
+            background: #000;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        .video-feed {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        .status-panel {
+            flex: 1;
+            background: #2d2d2d;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        h1 { margin-top: 0; }
+        pre {
+            background: #111;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-family: 'Consolas', monospace;
+            font-size: 14px;
+            color: #0f0;
+        }
+        .btn {
+            padding: 10px 20px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+        .btn:hover { background: #2980b9; }
+    </style>
+</head>
+<body>
+    <h1>🎥 Camera Dev Mode</h1>
+    
+    <button class="btn" onclick="window.location.href='/'">Back to Dashboard</button>
+
+    <div class="container">
+        <div class="video-container">
+            <img src="/video_feed" class="video-feed" alt="Live Camera Feed">
+        </div>
+        
+        <div class="status-panel">
+            <h2>Real-time Analysis</h2>
+            <pre id="status-json">Loading...</pre>
+        </div>
+    </div>
+
+    <script>
+        function updateStatus() {
+            fetch('/api/camera/status')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('status-json').textContent = JSON.stringify(data, null, 2);
+                })
+                .catch(err => console.error(err));
+        }
+
+        // Update status every 500ms
+        setInterval(updateStatus, 500);
+        updateStatus();
+    </script>
+</body>
+</html>

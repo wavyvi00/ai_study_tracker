@@ -23,8 +23,8 @@ source venv/bin/activate
 
 # Install/upgrade dependencies
 echo "📥 Installing build dependencies..."
-pip install --upgrade pip
-pip install -r requirements-macos.txt
+python3 -m pip install --upgrade pip
+python3 -m pip install -r requirements-macos.txt
 
 # Clean previous builds
 echo "🧹 Cleaning previous builds..."
@@ -32,10 +32,9 @@ rm -rf build dist *.spec
 
 # Build the app with PyInstaller
 echo "🔨 Building application bundle..."
-pyinstaller \
+python3 -m PyInstaller \
     --name "FocusWin" \
     --windowed \
-    --onedir \
     --add-data "templates:templates" \
     --add-data "static:static" \
     --hidden-import "engineio.async_drivers.threading" \
@@ -50,7 +49,7 @@ echo ""
 echo "✅ Build complete!"
 echo ""
 echo "📦 Your standalone app is located at:"
-echo "   dist/AI Study Tracker.app"
+echo "   dist/FocusWin.app"
 echo ""
 echo "To run the app:"
 echo "   1. Navigate to the dist folder"

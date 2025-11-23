@@ -30,21 +30,43 @@ class GamificationEngine:
         # Session-specific tracking (resets each session)
         self.session_study_seconds = 0  # Time studied in current session
         self.session_xp_earned = 0  # XP earned in current session
+        self.session_attention_scores = []  # Track attention scores for analytics
+        self.session_paused = False  # Track if session is paused (user away)
         
         self.data_file = "study_data.json"
         self.load_data()
         
-    def update(self, is_studying):
+    def update(self, is_studying, attention_multiplier=1.0, user_present=True):
+        """Update game state with attention-based XP
+        
+        Args:
+            is_studying: Whether user is on a study app
+            attention_multiplier: XP multiplier based on attention (0.5-1.0)
+            user_present: Whether user is present at desk (for auto-pause)
+        """
         # Only track if a session is active
         if not self.session_active:
             return
+        
+        # Auto-pause if user not present
+        if not user_present:
+            self.session_paused = True
+            return  # Don't track time or XP when user is away
+        else:
+            self.session_paused = False
             
         if is_studying:
             self.total_study_seconds += 1
             self.session_study_seconds += 1  # Track session time
             
-            # Track XP earned but DON'T add to total yet (award at session end)
-            self.session_xp_earned += 1  # Track session XP
+            # Track XP with attention multiplier (but DON'T add to total yet)
+            xp_this_second = 1.0 * attention_multiplier
+            self.session_xp_earned += xp_this_second
+            
+            # Track attention score for analytics
+            # Convert multiplier back to score (approximate)
+            attention_score = self._multiplier_to_score(attention_multiplier)
+            self.session_attention_scores.append(attention_score)
             
             # Regenerate health slowly if studying
             if self.health < 100:
@@ -56,6 +78,19 @@ class GamificationEngine:
             
         self.save_data()
         
+    def _multiplier_to_score(self, multiplier: float) -> float:
+        """Convert attention multiplier back to approximate score for analytics"""
+        if multiplier >= 1.0:
+            return 90.0
+        elif multiplier >= 0.85:
+            return 70.0
+        elif multiplier >= 0.7:
+            return 50.0
+        elif multiplier >= 0.6:
+            return 30.0
+        else:
+            return 10.0
+    
     def decrease_health(self, amount):
         self.health = float(self.health) - amount
         if self.health <= 0:
@@ -119,6 +154,8 @@ class GamificationEngine:
         # Reset session-specific counters
         self.session_study_seconds = 0
         self.session_xp_earned = 0
+        self.session_attention_scores = []
+        self.session_paused = False
         
         self.save_data()
         
@@ -172,6 +209,9 @@ class GamificationEngine:
         new_level = self.level
         new_xp = self.xp
         
+        # Calculate average attention score
+        avg_attention = sum(self.session_attention_scores) / len(self.session_attention_scores) if self.session_attention_scores else 0.0
+        
         # Prepare session data for history and results
         session_data = {
             "course": self.current_course,
@@ -193,7 +233,9 @@ class GamificationEngine:
             "challenge_duration": self.challenge_duration if self.session_mode == "challenge" else 0,
             # Streak data
             "current_streak": self.current_streak,
-            "best_streak": self.best_streak
+            "best_streak": self.best_streak,
+            # Camera analytics
+            "average_attention_score": round(avg_attention, 2)
         }
         
         # Reset session state
@@ -204,6 +246,8 @@ class GamificationEngine:
         self.current_course = None
         self.session_study_seconds = 0
         self.session_xp_earned = 0
+        self.session_attention_scores = []
+        self.session_paused = False
         
         self.save_data()
         

@@ -14,11 +14,13 @@ A gamified productivity tracker that helps you stay focused and level up your st
 - **💚 Health System**: Your health decreases when distracted and regenerates while studying
 - **⏱️ Study Timer**: Tracks total study time with a clean, formatted display
 - **📹 Camera Detection**: AI-powered attention tracking using computer vision
-- **👀 Gaze Tracking**: Detects if you're looking at the screen (MediaPipe)
+- **👀 3D Head Pose**: Tracks Pitch, Yaw, and Roll to detect looking down/away
+- **📱 Phone Detection**: Detects if you are using your phone (hands near face)
 - **🧍 Posture Analysis**: Monitors sitting posture for better focus
+- **🎥 Dev Mode**: Live camera feed with debug overlays and real-time analysis
 - **🖥️ Native Desktop App**: Beautiful native window on macOS and Windows
 - **🎨 Modern UI**: Sleek dark mode interface with smooth animations
-- **🔒 Privacy-First**: All data stored locally in `study_data.json`
+- **🔒 Privacy-First**: All processing is local; no video leaves your device
 
 ---
 
@@ -52,6 +54,7 @@ python desktop_app.py
 ```batch
 build-windows.bat
 REM Creates: dist\FocusWin\FocusWin.exe
+REM Note: Requires MediaPipe (might need manual install on some Windows setups)
 ```
 
 ## 🎯 How It Works
@@ -69,8 +72,15 @@ The tracker monitors your active window and classifies your activity as either *
 - Entertainment: Netflix, games
 - Other non-productive apps
 
+### Camera Intelligence (New!) 🧠
+- **Attention Score**: 0-100 score based on face orientation and gaze
+- **XP Multiplier**: Earn up to **1.0x XP** when focused, drops to **0.5x** when distracted
+- **Auto-Pause**: Session pauses automatically when you leave your desk
+- **Phone Penalty**: **-50 points** to attention score if phone usage is detected
+- **Posture Warnings**: Get notified if you slouch for too long
+
 ### Rewards System
-- **+1 XP per second** of studying
+- **+1 XP per second** of studying (multiplied by attention score)
 - **Level up** every 100 XP
 - **Health regenerates** slowly while studying (+0.1/sec)
 - **Health decreases** when distracted (-0.5/sec)
@@ -91,6 +101,10 @@ The tracker monitors your active window and classifies your activity as either *
    - System Settings → Privacy & Security → Screen Recording
    - Enable Terminal or Python
    - Restart the app
+
+4. **Enable Camera (Optional)**
+   - Click the camera icon in the UI to enable AI tracking
+   - Grant Camera permissions if prompted
 
 That's it! No Python installation needed.
 
@@ -116,7 +130,7 @@ This will create `dist/AI Study Tracker.app` - a standalone application bundle.
 
 This will:
 - Create a virtual environment
-- Install all dependencies
+- Install all dependencies (including MediaPipe, OpenCV)
 - Set up the development environment
 
 Then run:
@@ -124,6 +138,19 @@ Then run:
 source venv/bin/activate
 python3 desktop_app.py
 ```
+
+### 🎥 Dev Mode (Live Feed)
+
+Want to see what the AI sees?
+
+1. Start the application
+2. Open your browser to: `http://127.0.0.1:5002/dev_mode`
+3. You will see:
+   - Live video feed
+   - Face Mesh overlays
+   - Head Pose angles (Pitch/Yaw/Roll)
+   - Real-time attention score
+   - Phone detection status
 
 ---
 
@@ -135,6 +162,7 @@ python3 desktop_app.py
 - macOS 10.14 or higher
 - Python 3.8 or higher
 - Screen Recording permissions (for window tracking)
+- Camera permissions (for attention tracking)
 
 **Windows:**
 - Windows 10 or higher
@@ -206,7 +234,8 @@ focuswin/
 ├── desktop_app.py            # Native desktop window launcher
 ├── tracker.py                # Cross-platform window tracking
 ├── gamification.py           # XP, leveling, and health system
-├── camera_detector.py        # Camera-based attention detection
+├── camera_detector.py        # Camera-based attention detection (MediaPipe)
+├── camera_integration.py     # Camera logic helper (Posture, Breaks)
 ├── courses.py                # Course management
 ├── session_history.py        # Session tracking
 ├── requirements.txt          # Common dependencies
@@ -216,9 +245,11 @@ focuswin/
 ├── setup-windows.bat         # Windows setup script
 ├── build.sh                  # macOS build script
 ├── build-windows.bat         # Windows build script
+├── camera_config.json        # Camera settings (gitignored)
 ├── study_data.json           # Persistent user data (gitignored)
 ├── templates/
-│   └── index.html            # Main UI template
+│   ├── index.html            # Main UI template
+│   └── dev_mode.html         # Camera debug UI
 ├── static/
 │   ├── style.css             # Earthy theme styling
 │   └── script.js             # Real-time UI updates
@@ -239,6 +270,13 @@ Edit `tracker.py` to modify what counts as studying:
 self.study_keywords = ['code', 'terminal', 'docs', 'pdf', 'canvas', 'notion', ...]
 self.distraction_keywords = ['youtube', 'twitter', 'reddit', 'facebook', ...]
 ```
+
+### Camera Settings
+
+Edit `camera_config.json` (created after first run) to adjust:
+- `auto_pause_enabled`: Pause session when away
+- `posture_warnings_enabled`: Enable/disable posture alerts
+- `break_interval_minutes`: Time between break reminders
 
 ### Adjusting Rewards
 
@@ -321,12 +359,14 @@ For web-only testing without the native window:
 python3 app.py
 ```
 
-Then open `http://127.0.0.1:5001` in your browser.
+Then open `http://127.0.0.1:5002` in your browser.
 
 ### API Endpoints
 
 - `GET /` - Main application UI
 - `GET /api/status` - Returns current tracking state (JSON)
+- `GET /api/camera/status` - Returns camera tracking state (JSON)
+- `GET /video_feed` - MJPEG stream of camera feed (Dev Mode)
 
 ### Response Format
 
@@ -339,7 +379,13 @@ Then open `http://127.0.0.1:5001` in your browser.
   "level": 42,
   "health": 100,
   "time_formatted": "01:14:30",
-  "has_permissions": true
+  "has_permissions": true,
+  "camera": {
+      "enabled": true,
+      "attention_score": 85,
+      "phone_detected": false,
+      "message": "✅ Fully focused"
+  }
 }
 ```
 
@@ -350,6 +396,9 @@ Then open `http://127.0.0.1:5001` in your browser.
 - [x] Multi-platform support (macOS and Windows)
 - [x] Camera-based attention detection
 - [x] Pose and gaze tracking
+- [x] Phone detection (MediaPipe Hands)
+- [x] 3D Head Pose Estimation
+- [x] Dev Mode with live video feed
 
 **Planned:**
 - [ ] Daily/weekly statistics dashboard
@@ -358,7 +407,6 @@ Then open `http://127.0.0.1:5001` in your browser.
 - [ ] Export data to CSV/JSON
 - [ ] Achievements and badges system
 - [ ] Focus mode with website blocking
-- [ ] Phone detection (YOLO)
 - [ ] ML-based personalized learning
 
 ## 🤝 Contributing
