@@ -45,41 +45,9 @@ class WindowTracker:
             
         try:
             # Method 1: NSWorkspace (Simpler, gets active app)
-            workspace = NSWorkspace.sharedWorkspace()
-            active_app = workspace.frontmostApplication()
-            app_name = active_app.localizedName() if active_app else "Unknown"
+            app_name = self._get_active_app_name_macos()
+            window_title = self._get_active_window_title_macos()
             
-            # IGNORE THE TRACKER APP ITSELF - look for the next window
-            # If the tracker is the active app, find the next visible app
-            if app_name and app_name.lower() in ["python", "antigravity", "ai study tracker"]:
-                # Get all running apps and find the next one
-                running_apps = workspace.runningApplications()
-                for app in running_apps:
-                    candidate_name = app.localizedName()
-                    if candidate_name and candidate_name.lower() not in ["python", "antigravity", "ai study tracker", "finder"]:
-                        app_name = candidate_name
-                        break
-            
-            # Method 2: Quartz (More detailed, gets window title)
-            # Note: This requires Screen Recording permissions on macOS
-            options = kCGWindowListOptionOnScreenOnly
-            window_list = CGWindowListCopyWindowInfo(options, kCGNullWindowID)
-            
-            window_title = ""
-            has_permissions = True
-            
-            found_window = False
-            for window in window_list:
-                owner_name = window.get('kCGWindowOwnerName', '')
-                # Skip our own app windows
-                if owner_name.lower() in ["python", "antigravity", "ai study tracker"]:
-                    continue
-                if owner_name == app_name:
-                    window_title = window.get('kCGWindowName', '')
-                    found_window = True
-                    break
-            
-            # Fallback if app_name is unknown or empty (likely permission issue)
             if not app_name or app_name == "Unknown":
                 return ("Mock App", "Mock Window - VS Code", False)
                     
@@ -89,6 +57,35 @@ class WindowTracker:
             print(f"Error tracking window: {e}")
             # Fallback on error
             return ("Mock App", "Mock Window - VS Code", False)
+
+    def _get_active_window_title_macos(self):
+        """Get the title of the active window on macOS"""
+        try:
+            # Use AppleScript to get the window title of the frontmost app
+            script = 'tell application "System Events" to get name of window 1 of (first application process whose frontmost is true)'
+            result = subprocess.check_output(['osascript', '-e', script], stderr=subprocess.DEVNULL).decode('utf-8').strip()
+            return result
+        except:
+            return None
+
+    def _get_active_app_name_macos(self):
+        """Get the name of the active application on macOS"""
+        try:
+            # Use AppleScript to get the name of the frontmost app
+            # This is more reliable than NSWorkspace for some things
+            script = 'tell application "System Events" to get name of (first application process whose frontmost is true)'
+            result = subprocess.check_output(['osascript', '-e', script], stderr=subprocess.DEVNULL).decode('utf-8').strip()
+            
+            # Filter out our own app wrapper
+            if result in ["Python", "antigravity", "AI Study Tracker", "StudyWin"]:
+                # Try to get the window title to see if it's more descriptive
+                win_title = self._get_active_window_title_macos()
+                if win_title:
+                    return win_title
+            
+            return result
+        except:
+            return None
 
     def is_study_app(self, app_name, window_title):
         """Check if the current app/window is study-related"""

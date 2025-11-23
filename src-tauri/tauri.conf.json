@@ -1,12 +1,12 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "AI Study Tracker",
+  "productName": "StudyWin",
   "version": "0.1.0",
-  "identifier": "com.tauri.dev",
+  "identifier": "com.victorrodriguez.studywin",
   "build": {
-    "frontendDist": "dist",
+    "frontendDist": "../public",
     "devUrl": "http://127.0.0.1:5002",
-    "beforeDevCommand": "python3 desktop_app.py",
+    "beforeDevCommand": "python3 server.py",
     "beforeBuildCommand": "echo No build step needed"
   },
   "app": {
@@ -32,6 +32,17 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "macOS": {
+      "entitlements": "Entitlements.plist"
+    }
+  },
+  "plugins": {
+    "macos-permissions": {
+      "permissions": [
+        "Microphone",
+        "Camera"
+      ]
+    }
   }
 }

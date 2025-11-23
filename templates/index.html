@@ -23,7 +23,7 @@
 <body>
     <div class="container">
         <header>
-            <h1>FocusWin</h1>
+            <h1>StudyWin</h1>
             <p class="subtitle">Level up your focus 🎯</p>
 
             <!-- Camera Controls -->
@@ -37,9 +37,8 @@
                     <span class="status-indicator"></span>
                     <span id="camera-status-text">Initializing...</span>
                 </div>
-            </div>
 
-            <div class="status-badge" id="status-badge">Initializing...</div>
+                <div class="status-badge" id="status-badge">Initializing...</div>
         </header>
 
         <!-- Permission Warning -->
@@ -268,14 +267,6 @@
                 </div>
             </div>
         </main>
-    </div>
-
-    <!-- AI Companion -->
-    <div id="ai-companion-container">
-        <div id="speech-bubble" class="speech-bubble">Hello! I am FocusWin.</div>
-        <div id="magic-ball" class="magic-ball">
-            <div class="magic-ball-inner"></div>
-        </div>
     </div>
 
     <script src="{{ url_for('static', filename='script.js') }}"></script>

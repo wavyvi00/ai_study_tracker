@@ -138,6 +138,15 @@ class CameraDetector:
             self.camera = None
             
         print("🛑 Camera stopped")
+
+    def get_frame(self):
+        """Get the latest frame for video streaming"""
+        with self.lock:
+            if self.debug_frame is not None:
+                # Encode frame as JPEG
+                ret, buffer = cv2.imencode('.jpg', self.debug_frame)
+                return buffer.tobytes()
+            return None
     
     def _detection_loop(self):
         """Background thread for continuous detection"""

@@ -1,9 +1,9 @@
-# FocusWin 🎯
+# StudyWin 🎯
 
 A gamified productivity tracker that helps you stay focused and level up your study sessions with RPG-style mechanics.
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue)
-![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey)
+![Platform](https://img.shields.io/badge/platform-macOS-lightgrey)
 ![Python](https://img.shields.io/badge/python-3.8+-green)
 
 ## ✨ Features
@@ -17,8 +17,8 @@ A gamified productivity tracker that helps you stay focused and level up your st
 - **👀 3D Head Pose**: Tracks Pitch, Yaw, and Roll to detect looking down/away
 - **📱 Phone Detection**: Detects if you are using your phone (hands near face)
 - **🧍 Posture Analysis**: Monitors sitting posture for better focus
-- **🎥 Dev Mode**: Live camera feed with debug overlays and real-time analysis
-- **🖥️ Native Desktop App**: Beautiful native window on macOS and Windows
+- **🎥 Live Camera Feed**: Real-time video preview with detection overlays
+- **🖥️ Native Desktop App**: Beautiful native macOS window powered by Tauri
 - **🎨 Modern UI**: Sleek dark mode interface with smooth animations
 - **🔒 Privacy-First**: All processing is local; no video leaves your device
 
@@ -26,36 +26,53 @@ A gamified productivity tracker that helps you stay focused and level up your st
 
 ## 🚀 Quick Start
 
-### macOS
+### Prerequisites
+- **Python 3.8+**
+- **Rust** (for Tauri): Install via [rustup](https://rustup.rs/)
+- **Node.js** (for Tauri): Install via [Homebrew](https://brew.sh/)
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd ai_study_tracker
+   ```
+
+2. **Install Python dependencies**
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate
+   pip install -r requirements.txt
+   ```
+
+3. **Install Tauri CLI**
+   ```bash
+   cargo install tauri-cli
+   ```
+
+### Running the App
 
 **Development Mode:**
 ```bash
-./setup.sh
-source venv/bin/activate
-python3 desktop_app.py
+cd src-tauri
+cargo tauri dev
 ```
 
-**Build Standalone App:**
-```bash
-./build.sh
-# Creates: dist/FocusWin.app
-```
+This will:
+- Start the Flask backend on port 5002
+- Launch the native macOS window
+- Request Camera permissions (if not already granted)
 
-### Windows
+### First Launch
 
-**Development Mode:**
-```batch
-setup-windows.bat
-venv\Scripts\activate.bat
-python desktop_app.py
-```
+On first launch, macOS will prompt you for:
+- **Camera Access**: Required for attention detection and posture monitoring
+- **Screen Recording**: Required for tracking active applications
 
-**Build Standalone App:**
-```batch
-build-windows.bat
-REM Creates: dist\FocusWin\FocusWin.exe
-REM Note: Requires MediaPipe (might need manual install on some Windows setups)
-```
+Grant these permissions in **System Settings > Privacy & Security**.
+
+---
 
 ## 🎯 How It Works
 
@@ -72,7 +89,7 @@ The tracker monitors your active window and classifies your activity as either *
 - Entertainment: Netflix, games
 - Other non-productive apps
 
-### Camera Intelligence (New!) 🧠
+### Camera Intelligence 🧠
 - **Attention Score**: 0-100 score based on face orientation and gaze
 - **XP Multiplier**: Earn up to **1.0x XP** when focused, drops to **0.5x** when distracted
 - **Auto-Pause**: Session pauses automatically when you leave your desk
@@ -84,20 +101,6 @@ The tracker monitors your active window and classifies your activity as either *
 - **Level up** every 100 XP
 - **Health regenerates** slowly while studying (+0.1/sec)
 - **Health decreases** when distracted (-0.5/sec)
-
-## ⚡ Quick Start (No Python Required)
-
-### For Users - Download & Run
-
-1. **Download the standalone app** (when available)
-   - Get `AI Study Tracker.app` from releases
-
-2. **First launch**
-   - Double-click `AI Study Tracker.app`
-   - If macOS blocks it: Right-click → Open
-   - Or: System Settings → Privacy & Security → "Open Anyway"
-
-3. **Grant permissions**
    - System Settings → Privacy & Security → Screen Recording
    - Enable Terminal or Python
    - Restart the app

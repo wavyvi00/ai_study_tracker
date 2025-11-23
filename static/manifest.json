@@ -1,6 +1,6 @@
 {
-    "name": "AI Study Tracker",
-    "short_name": "FocusWin",
+    "name": "StudyWin",
+    "short_name": "StudyWin",
     "description": "AI-powered study tracker with camera detection and voice commands",
     "start_url": "/",
     "display": "standalone",
