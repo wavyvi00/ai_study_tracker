@@ -155,7 +155,7 @@ class CameraDetector:
                 detection = self._detect_once()
                 if detection:
                     self.last_detection = detection
-                time.sleep(0.5)  # Check twice per second
+                time.sleep(0.05)  # 20 fps
             except Exception as e:
                 print(f"Detection error: {e}")
                 time.sleep(1)
@@ -167,6 +167,7 @@ class CameraDetector:
             
         ret, frame = self.camera.read()
         if not ret:
+            print("DEBUG: Failed to read frame from camera")
             return None
             
         # Store frame for debug view (thread-safe)
@@ -201,17 +202,35 @@ class CameraDetector:
     
     def _advanced_detection(self, frame):
         """Advanced detection with MediaPipe"""
+        # print("DEBUG: Running advanced detection...")
+        if frame is None or frame.size == 0:
+            return None
+        
+        # Validate frame dimensions
+        if len(frame.shape) != 3 or frame.shape[2] != 3:
+            print("DEBUG: Invalid frame shape, skipping")
+            return None
+            
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         
-        # Process with face mesh and pose
-        face_results = self.face_mesh.process(rgb_frame)
-        pose_results = self.pose.process(rgb_frame)
-        hand_results = self.hands.process(rgb_frame)
+        # Ensure frame is writable for MediaPipe
+        rgb_frame.flags.writeable = False
         
-        # Run YOLO detection periodically (every 10 frames ~ 0.3 sec)
+        # Process with face mesh and pose - wrap in try/except for safety
+        try:
+            face_results = self.face_mesh.process(rgb_frame)
+            pose_results = self.pose.process(rgb_frame)
+            hand_results = self.hands.process(rgb_frame)
+        except Exception as e:
+            print(f"DEBUG: MediaPipe processing error: {e}")
+            return None
+        
+            # Run YOLO detection periodically (every 3 frames ~ 0.3 sec)
         self.frame_count += 1
-        if self.frame_count % 10 == 0 and self.yolo_model:
-            self._detect_phone_yolo(frame)
+        if self.frame_count % 3 == 0 and self.yolo_model:
+            phone_result = self._detect_phone_yolo(frame)
+            if phone_result:
+                print(f"DEBUG: YOLO phone detection result: {phone_result}")
         
         # Calculate attention score with head pose
         attention_score, phone_detected, head_pose = self._calculate_attention_score(face_results, pose_results, hand_results, frame.shape)
@@ -225,6 +244,7 @@ class CameraDetector:
         
         # Check presence
         present = face_results.multi_face_landmarks is not None
+        # print(f"DEBUG: Presence detected: {present}")
         
         # Get landmarks if present
         face_landmarks = face_results.multi_face_landmarks[0] if present else None
@@ -574,7 +594,7 @@ class CameraDetector:
                 'enabled': True,
                 'present': None,
                 'attention_score': 0,
-                'message': 'Initializing...'
+                'message': 'Starting camera...'
             }
         
         return {

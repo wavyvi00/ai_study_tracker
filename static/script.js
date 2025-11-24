@@ -414,6 +414,27 @@ function updateStatus() {
                     dashboardHealth.textContent = `${Math.round(data.health)}%`;
                 }
 
+                // Update Camera Status Badge (only when session is active)
+                const statusBadgeElem = document.getElementById('status-badge');
+                if (statusBadgeElem && data.camera_enabled && data.session_active) {
+                    if (data.user_present === false) {
+                        statusBadgeElem.textContent = "User away";
+                        statusBadgeElem.className = "status-badge distracted";
+                    } else if (data.is_studying) {
+                        statusBadgeElem.textContent = "Studying 🧠";
+                        statusBadgeElem.className = "status-badge studying";
+                    } else {
+                        statusBadgeElem.textContent = "Distracted ⚠️";
+                        statusBadgeElem.className = "status-badge distracted";
+                    }
+                } else if (statusBadgeElem && data.camera_enabled && !data.session_active) {
+                    statusBadgeElem.textContent = data.camera_message || "Camera Active";
+                    statusBadgeElem.className = "status-badge";
+                } else if (statusBadgeElem && !data.camera_enabled) {
+                    statusBadgeElem.textContent = "Camera Off";
+                    statusBadgeElem.className = "status-badge";
+                }
+
                 // Total Time
                 const dashboardTotalTime = document.getElementById('dashboard-total-time');
                 if (dashboardTotalTime) {
@@ -454,19 +475,34 @@ function updateStatus() {
                 totalTimeDisplay.textContent = data.time_formatted;
             }
 
-            // Update Status Badge
-            const badge = document.getElementById('status-badge');
+            // Update status
+            const statusBadge = document.getElementById('status-badge');
+            const statusText = document.getElementById('status-text');
+            const statusIcon = document.getElementById('status-icon');
+            const statusMessage = document.getElementById('status-message');
+
             if (data.session_active) {
-                if (data.is_studying) {
-                    badge.textContent = "Studying 🧠";
-                    badge.className = "status-badge studying";
+                if (data.user_present === false) {
+                    statusBadge.className = 'status-badge distracted';
+                    statusText.textContent = 'Away';
+                    statusIcon.textContent = '👻';
+                    statusMessage.textContent = 'User away';
+                } else if (data.is_studying) {
+                    statusBadge.className = 'status-badge studying';
+                    statusText.textContent = 'Studying';
+                    statusIcon.textContent = '🧠';
+                    statusMessage.textContent = 'Keep up the good work!';
                 } else {
-                    badge.textContent = "Distracted ⚠️";
-                    badge.className = "status-badge distracted";
+                    statusBadge.className = 'status-badge distracted';
+                    statusText.textContent = 'Distracted';
+                    statusIcon.textContent = '⚠️';
+                    statusMessage.textContent = 'Get back to work!';
                 }
             } else {
-                badge.textContent = "No Active Session";
-                badge.className = "status-badge";
+                statusBadge.className = 'status-badge idle';
+                statusText.textContent = 'Idle';
+                statusIcon.textContent = '💤';
+                statusMessage.textContent = 'Ready to start a session?';
             }
 
             // Update Health
@@ -490,14 +526,6 @@ function updateStatus() {
             // Update App Info
             document.getElementById('app-name').textContent = data.app_name;
             document.getElementById('window-title').textContent = data.window_title || "...";
-
-            // Permission Warning
-            const warning = document.getElementById('permission-warning');
-            if (data.has_permissions === false) {
-                warning.style.display = 'block';
-            } else {
-                warning.style.display = 'none';
-            }
         })
         .catch(error => console.error('Error fetching status:', error));
 }
@@ -649,23 +677,39 @@ function startCameraStatusPolling() {
             const response = await fetch('/api/camera/status');
             const data = await response.json();
 
+            // Also fetch main status to check session state
+            const statusResponse = await fetch('/api/status');
+            const statusData = await statusResponse.json();
+
             if (data.enabled) {
                 const statusText = document.getElementById('camera-status-text');
-                // Use the message from the backend if available
-                if (data.message) {
-                    statusText.textContent = data.message;
-                } else if (data.present === true) {
-                    statusText.textContent = '✅ User Present';
-                } else if (data.present === false) {
-                    statusText.textContent = '⚠️ User Away';
+
+                // If session is active, show study state
+                if (statusData.session_active) {
+                    if (statusData.user_present === false) {
+                        statusText.textContent = '👻 User away';
+                    } else if (statusData.is_studying) {
+                        statusText.textContent = '🧠 Studying';
+                    } else {
+                        statusText.textContent = '⚠️ Distracted';
+                    }
                 } else {
-                    statusText.textContent = 'Detecting...';
+                    // No session - show camera detection status
+                    if (data.message) {
+                        statusText.textContent = data.message;
+                    } else if (data.present === true) {
+                        statusText.textContent = '✅ User Present';
+                    } else if (data.present === false) {
+                        statusText.textContent = '⚠️ User Away';
+                    } else {
+                        statusText.textContent = 'Detecting...';
+                    }
                 }
             }
         } catch (error) {
-            console.error('Camera status error:', error);
+            console.error('Error fetching camera status:', error);
         }
-    }, 2000);
+    }, 500); // Poll every 500ms
 }
 
 function stopCameraStatusPolling() {

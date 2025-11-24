@@ -47,11 +47,13 @@ class GamificationEngine:
         # Only track if a session is active
         if not self.session_active:
             return
+            
+        print(f"DEBUG: Update - Studying: {is_studying}, Present: {user_present}, Health: {self.health}") # Debug log
         
-        # Auto-pause if user not present
+        # If user is away, treat as not studying (distracted)
         if not user_present:
-            self.session_paused = True
-            return  # Don't track time or XP when user is away
+            is_studying = False
+            self.session_paused = False # Ensure not paused
         else:
             self.session_paused = False
             
@@ -74,7 +76,7 @@ class GamificationEngine:
                 
         else:
             # Not studying (Distracted)
-            self.decrease_health(0.5) # Lose 0.5 health per second
+            self.decrease_health(5.0) # Lose 5 health per second (increased for testing)
             
         self.save_data()
         
@@ -92,10 +94,14 @@ class GamificationEngine:
             return 10.0
     
     def decrease_health(self, amount):
+        old_health = self.health
         self.health = float(self.health) - amount
         if self.health <= 0:
             self.health = 0
+            print(f"DEBUG: Health depleted! {old_health} -> {self.health}")
             return True  # Health depleted
+            
+        print(f"DEBUG: Decreasing health: {old_health} -> {self.health} (Amount: {amount})")
         return False
     
     def is_health_depleted(self):

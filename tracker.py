@@ -99,9 +99,11 @@ class WindowTracker:
         # Check for distraction keywords
         for keyword in self.distraction_keywords:
             if keyword in combined:
+                print(f"DEBUG: Distraction detected: {keyword} in {combined}")
                 return False
-        
-        # Default to studying if no match
+                
+        # Default to True if no distraction found (permissive mode)
+        # print(f"DEBUG: No keywords matched, defaulting to True for: {combined}")
         return True
 
     def _get_active_window_windows(self):

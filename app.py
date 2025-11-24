@@ -14,6 +14,7 @@ import threading
 import time
 import os
 import logging
+import json
 
 # Disable Flask request logging for cleaner console
 log = logging.getLogger('werkzeug')
@@ -35,8 +36,8 @@ camera_analytics = CameraAnalytics()
 
 # Global State
 current_state = {
-    "app_name": "Initializing...",
-    "window_title": "...",
+    "app_name": "Ready",
+    "window_title": "Waiting for session...",
     "is_studying": False,
     "xp": 0,
     "level": 1,
@@ -124,6 +125,7 @@ def update_loop():
                 # Override if phone detected by camera
                 if camera_status.get('phone_detected', False):
                     is_studying = False
+                    user_present = True # Force present so we penalize instead of pausing
                 
                 # 3. Update gamification with camera data
                 game_engine.update(is_studying, attention_multiplier, user_present)
@@ -142,6 +144,7 @@ def update_loop():
                 current_state["app_name"] = app_name
                 current_state["window_title"] = window_title
                 current_state["is_studying"] = is_studying
+                current_state["user_present"] = user_present # Add this line
                 
                 # 7. Voice Assistant Feedback
                 # Distracted if: Not studying OR (Camera enabled AND (Phone detected OR Low attention))
@@ -152,13 +155,12 @@ def update_loop():
                     elif camera_status.get('attention_score', 100) < 40:
                         is_distracted = True
                 
-                voice_assistant.check_status(is_distracted, is_studying)
                 current_state["has_permissions"] = has_permissions
                 current_state["session_paused"] = game_engine.session_paused
             else:
                 # No active session - set default values
-                current_state["app_name"] = "No active session"
-                current_state["window_title"] = ""
+                current_state["app_name"] = "Ready"
+                current_state["window_title"] = "Waiting for session..."
                 current_state["is_studying"] = False
                 current_state["has_permissions"] = True
                 current_state["session_paused"] = False
@@ -197,6 +199,7 @@ def index():
 
 @app.route('/api/status')
 def status():
+    # print(f"API STATUS - Active: {current_state.get('session_active')}, Health: {current_state.get('health')}")
     return jsonify(current_state)
 
 @app.route('/api/session/start', methods=['POST'])
@@ -335,7 +338,20 @@ def dev_mode():
     """Dev mode page with live camera feed"""
     return render_template('dev_mode.html')
 
+@app.route('/hud')
+@app.route('/hud.html')
+def hud():
+    """HUD overlay page"""
+    return render_template('hud.html')
+
 if __name__ == '__main__':
+    # Load camera config
+    try:
+        with open('camera_config.json', 'r') as f:
+            camera_config = json.load(f)
+    except FileNotFoundError:
+        camera_config = {"enabled": False}
+
     # Start camera if enabled in config
     if camera_config.get('enabled', False):
         camera_detector.start()

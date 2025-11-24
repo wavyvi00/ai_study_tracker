@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StudyWin HUD</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            background: transparent;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: transparent;
+            color: #ffffff;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0;
+        }
+
+        .hud-container {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-between;
+            /* Distribute space evenly */
+            gap: 12px;
+            cursor: grab;
+            padding: 6px 12px;
+            background: rgba(139, 115, 85, 0.95);
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            width: 350px;
+            /* Match window width */
+            height: 40px;
+            /* Match window height */
+        }
+
+        .timer {
+            font-size: 16px;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            color: #f0f0f0;
+            letter-spacing: 0.5px;
+            min-width: 75px;
+            /* Increased to prevent shift */
+            text-align: center;
+        }
+
+        .health-container {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            width: 120px;
+            /* Fixed width */
+        }
+
+        .health-label {
+            font-size: 11px;
+            color: #e0e0e0;
+            white-space: nowrap;
+        }
+
+        .health-bar {
+            flex: 1;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            overflow: hidden;
+            min-width: 60px;
+        }
+
+        .health-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #27ae60, #2ecc71);
+            border-radius: 3px;
+            transition: width 0.3s ease, background 0.3s ease;
+        }
+
+        .health-fill.medium {
+            background: linear-gradient(90deg, #f39c12, #f1c40f);
+        }
+
+        .health-fill.low {
+            background: linear-gradient(90deg, #c0392b, #e74c3c);
+        }
+
+        .status-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 9px;
+            color: #e0e0e0;
+        }
+
+        .camera-status {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+        }
+
+        .status-dot {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: #27ae60;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.inactive {
+            background: #bdc3c7;
+            animation: none;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .mode-badge {
+            font-size: 10px;
+            padding: 2px 6px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 4px;
+            color: #ffffff;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="hud-container" id="hud-drag-handle">
+        <div class="timer" id="timer">00:00:00</div>
+
+        <div class="health-container">
+            <span class="health-label">❤️ <span id="health-text">100%</span></span>
+            <div class="health-bar">
+                <div class="health-fill" id="health-fill" style="width: 100%;"></div>
+            </div>
+        </div>
+
+        <div class="status-row">
+            <div class="mode-badge" id="mode">Idle</div>
+            <div class="mode-badge" id="status-text" style="background: rgba(0,0,0,0.2);">Ready</div>
+        </div>
+    </div>
+
+    <script>
+        function updateHUD() {
+            // Add timestamp to prevent caching
+            fetch('http://127.0.0.1:5002/api/status?t=' + Date.now())
+                .then(response => response.json())
+                .then(data => {
+                    console.log('HUD Data:', data); // Debug log
+                    // Update timer
+                    const timer = document.getElementById('timer');
+                    if (data.session_active) {
+                        timer.textContent = data.session_time_formatted || '00:00:00';
+                    } else {
+                        timer.textContent = '00:00:00';
+                    }
+
+                    // Update course - REMOVED as element doesn't exist in compact HUD
+                    // const course = document.getElementById('course');
+                    // if (data.session_active && data.current_course) {
+                    //    course.textContent = '📚 ' + data.current_course;
+                    // } else {
+                    //    course.textContent = 'No active session';
+                    // }
+
+                    // Update health
+                    const health = Math.round(data.health || 100);
+                    const healthText = document.getElementById('health-text');
+                    const healthFill = document.getElementById('health-fill');
+
+                    healthText.textContent = health + '%';
+                    healthFill.style.width = health + '%';
+
+                    // Change color based on health
+                    healthFill.className = 'health-fill';
+                    if (health <= 20) {
+                        healthFill.classList.add('low');
+                    } else if (health <= 50) {
+                        healthFill.classList.add('medium');
+                    }
+
+                    // Update camera status
+                    const cameraDot = document.getElementById('camera-dot');
+                    // const cameraText = document.getElementById('camera-text'); // Element missing
+
+                    // Check if camera is enabled via separate endpoint
+                    fetch('http://127.0.0.1:5002/api/camera/status')
+                        .then(r => r.json())
+                        .then(camData => {
+                            if (camData.enabled) {
+                                cameraDot.classList.remove('inactive');
+                                // cameraText.textContent = 'Camera';
+                            } else {
+                                cameraDot.classList.add('inactive');
+                                // cameraText.textContent = 'Camera Off';
+                            }
+                        })
+                        .catch(() => {
+                            cameraDot.classList.add('inactive');
+                        });
+
+                    // Update mode
+                    const mode = document.getElementById('mode');
+                    if (data.session_active) {
+                        if (data.session_mode === 'challenge') {
+                            mode.textContent = '⏱️ Challenge';
+                        } else {
+                            mode.textContent = '🎯 Normal';
+                        }
+                    } else {
+                        mode.textContent = 'Idle';
+                    }
+
+                    // Update status text
+                    const statusText = document.getElementById('status-text');
+                    if (data.session_active) {
+                        if (data.user_present === false) {
+                            statusText.textContent = '👻 Away';
+                            statusText.style.color = '#f39c12'; // Orange for away
+                        } else if (data.is_studying) {
+                            statusText.textContent = '🧠 Studying';
+                            statusText.style.color = '#2ecc71';
+                        } else {
+                            statusText.textContent = '⚠️ Distracted';
+                            statusText.style.color = '#e74c3c';
+                        }
+                    } else {
+                        statusText.textContent = 'Ready';
+                        statusText.style.color = '#bdc3c7';
+                    }
+                })
+                .catch(err => {
+                    console.error('HUD update error:', err);
+                });
+        }
+
+        // Update every second
+        setInterval(updateHUD, 1000);
+        updateHUD();
+    </script>
+</body>
+
+</html>

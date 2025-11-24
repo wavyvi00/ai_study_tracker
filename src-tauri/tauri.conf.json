@@ -6,7 +6,7 @@
   "build": {
     "frontendDist": "../public",
     "devUrl": "http://127.0.0.1:5002",
-    "beforeDevCommand": "python3 server.py",
+    "beforeDevCommand": "python3 app.py",
     "beforeBuildCommand": "echo No build step needed"
   },
   "app": {
@@ -17,11 +17,28 @@
         "height": 600,
         "resizable": true,
         "fullscreen": false
+      },
+      {
+        "label": "hud",
+        "title": "StudyWin HUD",
+        "width": 350,
+        "height": 40,
+        "resizable": false,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "url": "hud.html"
       }
     ],
     "security": {
-      "csp": null
-    }
+      "csp": null,
+      "capabilities": [
+        "hud-capability"
+      ]
+    },
+    "withGlobalTauri": true,
+    "macOSPrivateApi": true
   },
   "bundle": {
     "active": true,
