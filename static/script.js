@@ -436,7 +436,7 @@ function updateStatus() {
                         statusBadgeElem.textContent = "User away";
                         statusBadgeElem.className = "status-badge distracted";
                     } else if (data.is_studying) {
-                        statusBadgeElem.textContent = "Studying 🧠";
+                        statusBadgeElem.textContent = "Focused 🧠";
                         statusBadgeElem.className = "status-badge studying";
                     } else {
                         statusBadgeElem.textContent = "Distracted ⚠️";
@@ -504,7 +504,7 @@ function updateStatus() {
                     statusMessage.textContent = 'User away';
                 } else if (data.is_studying) {
                     statusBadge.className = 'status-badge studying';
-                    statusText.textContent = 'Studying';
+                    statusText.textContent = 'Focused';
                     statusIcon.textContent = '🧠';
                     statusMessage.textContent = 'Keep up the good work!';
                 } else {
@@ -704,7 +704,7 @@ function startCameraStatusPolling() {
                     if (statusData.user_present === false) {
                         statusText.textContent = '👻 User away';
                     } else if (statusData.is_studying) {
-                        statusText.textContent = '🧠 Studying';
+                        statusText.textContent = '🧠 Focused';
                     } else {
                         statusText.textContent = '⚠️ Distracted';
                     }

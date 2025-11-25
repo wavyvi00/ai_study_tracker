@@ -15,6 +15,8 @@ import time
 import os
 import logging
 import json
+import signal
+import atexit
 
 # Disable Flask request logging for cleaner console
 log = logging.getLogger('werkzeug')
@@ -122,9 +124,14 @@ def update_loop():
                 # 1. Get Active Window
                 app_name, window_title, has_permissions = tracker.get_active_window()
                 
-                # 2. Check if Studying
+                # 2. Check if Focused
                 print(f"DEBUG: Checking window - App: {app_name}, Title: {window_title}")
                 is_studying = tracker.is_study_app(app_name, window_title)
+                
+                # Skip update if window should be ignored (None = FocusWin HUD, etc.)
+                if is_studying is None:
+                    print(f"DEBUG: Skipping update for ignored window")
+                    continue
                 
                 # Override if phone detected by camera
                 if camera_status.get('phone_detected', False):
@@ -196,6 +203,21 @@ def update_loop():
             print(f"Error in update loop: {e}")
             
         time.sleep(1)
+
+# Cleanup function
+def cleanup():
+    """Clean up resources on exit"""
+    print("\n🧹 Cleaning up resources...")
+    try:
+        camera_detector.stop()
+    except Exception as e:
+        print(f"Error stopping camera: {e}")
+    print("✅ Cleanup complete")
+
+# Register cleanup handlers
+atexit.register(cleanup)
+signal.signal(signal.SIGINT, lambda sig, frame: (cleanup(), exit(0)))
+signal.signal(signal.SIGTERM, lambda sig, frame: (cleanup(), exit(0)))
 
 # Start background thread
 update_thread = threading.Thread(target=update_loop, daemon=True)

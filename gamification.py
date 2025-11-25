@@ -48,7 +48,7 @@ class GamificationEngine:
         if not self.session_active:
             return
             
-        print(f"DEBUG: Update - Studying: {is_studying}, Present: {user_present}, Health: {self.health}") # Debug log
+        print(f"DEBUG: Update - Focused: {is_studying}, Present: {user_present}, Health: {self.health}") # Debug log
         
         # If user is away, treat as not studying (distracted)
         if not user_present:

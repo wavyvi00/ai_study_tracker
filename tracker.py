@@ -27,8 +27,26 @@ else:
 class WindowTracker:
     def __init__(self):
         self.platform = platform.system()
-        self.study_keywords = ['code', 'terminal', 'docs', 'pdf', 'canvas', 'notion', 'obsidian', 'cursor', 'xcode', 'intellij', 'pycharm']
+        self.study_keywords = ['code', 'terminal', 'docs', 'pdf', 'canvas', 'notion', 'obsidian', 'cursor', 'xcode', 'intellij', 'pycharm', 'safari', 'calendar']
         self.distraction_keywords = ['youtube', 'twitter', 'reddit', 'facebook', 'instagram', 'netflix', 'game']
+        
+        # Educational keywords that can override distractions (e.g., educational YouTube videos)
+        self.educational_keywords = [
+            # Academic subjects
+            'math', 'mathematics', 'algebra', 'calculus', 'geometry', 'statistics',
+            'physics', 'chemistry', 'biology', 'science',
+            'history', 'geography', 'economics', 'psychology',
+            # Programming & Tech
+            'programming', 'coding', 'python', 'javascript', 'java', 'c++',
+            'tutorial', 'course', 'lesson', 'lecture', 'learn', 'learning',
+            'education', 'educational', 'study', 'studying',
+            # Educational platforms
+            'khan academy', 'coursera', 'udemy', 'edx', 'mit opencourseware',
+            '3blue1brown', 'crash course', 'ted-ed', 'veritasium',
+            # General learning
+            'how to', 'guide', 'explained', 'introduction to', 'basics of',
+            'workshop', 'seminar', 'training', 'certification'
+        ]
         self.accessibility_permission_checked = False
         self.has_accessibility_permission = False
     
@@ -146,7 +164,7 @@ class WindowTracker:
             result = subprocess.check_output(['osascript', '-e', script], stderr=subprocess.PIPE).decode('utf-8').strip()
             
             # Filter out our own app wrapper
-            if result in ["Python", "antigravity", "AI Study Tracker", "StudyWin"]:
+            if result in ["Python", "antigravity", "AI Study Tracker", "StudyWin", "FocusWin"]:
                 # Try to get the window title to see if it's more descriptive
                 win_title = self._get_active_window_title_macos()
                 if win_title:
@@ -167,23 +185,49 @@ class WindowTracker:
             return None
 
     def is_study_app(self, app_name, window_title):
-        """Check if the current app/window is study-related"""
+        """Check if the current app/window is study-related with smart educational detection"""
         combined = f"{app_name} {window_title}".lower()
+        app_name_lower = app_name.lower()
+        window_title_lower = window_title.lower() if window_title else ""
+        
+        # Filter out our own app windows (HUD, main app, etc.)
+        # Only check the app name, not the window title
+        # Return None to indicate "ignore this window completely"
+        if app_name_lower in ['focuswin', 'studywin']:
+            print(f"DEBUG: Ignoring own app window: {app_name}")
+            return None  # None = ignore, don't update health
+        
+        # Check for distraction keywords
+        distraction_detected = False
+        matched_distraction = None
+        for keyword in self.distraction_keywords:
+            if keyword in combined:
+                distraction_detected = True
+                matched_distraction = keyword
+                break
+        
+        # If distraction detected, check if it's educational content
+        if distraction_detected:
+            # Check window title for educational keywords
+            for edu_keyword in self.educational_keywords:
+                if edu_keyword in window_title_lower:
+                    print(f"DEBUG: Educational content detected on {matched_distraction}: '{edu_keyword}' in title")
+                    return True  # Override distraction - it's educational!
+            
+            # No educational keywords found - it's a real distraction
+            print(f"DEBUG: Distraction detected: {matched_distraction} in {combined}")
+            return False
         
         # Check for study keywords
         for keyword in self.study_keywords:
             if keyword in combined:
+                print(f"DEBUG: Study keyword matched: {keyword} in {combined}")
                 return True
-        
-        # Check for distraction keywords
-        for keyword in self.distraction_keywords:
-            if keyword in combined:
-                print(f"DEBUG: Distraction detected: {keyword} in {combined}")
-                return False
                 
-        # Default to True if no distraction found (permissive mode)
-        print(f"DEBUG: No keywords matched, defaulting to True for: {combined}")
-        return True
+        # Default to False if no keywords matched (strict mode)
+        # This prevents random apps from being counted as studying
+        print(f"DEBUG: No keywords matched, defaulting to False (distraction) for: {combined}")
+        return False
 
     def _get_active_window_windows(self):
         """Get active window on Windows"""

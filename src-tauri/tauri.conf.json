@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "StudyWin",
+  "productName": "FocusWin",
   "version": "0.1.0",
-  "identifier": "com.victorrodriguez.studywin",
+  "identifier": "com.victorrodriguez.focuswin",
   "build": {
     "frontendDist": "../public",
     "devUrl": "http://127.0.0.1:5002",
@@ -20,7 +20,7 @@
       },
       {
         "label": "hud",
-        "title": "StudyWin HUD",
+        "title": "FocusWin HUD",
         "width": 350,
         "height": 40,
         "resizable": false,

@@ -1,4 +1,4 @@
-# StudyWin 🎯
+# FocusWin 🎯
 
 A gamified productivity tracker that helps you stay focused and level up your study sessions with RPG-style mechanics.
 
@@ -11,7 +11,7 @@ A gamified productivity tracker that helps you stay focused and level up your st
 - **Gamification System**: Earn XP, level up, and maintain health based on your focus
 - **Daily Streaks**: Build consecutive study days with bonus XP rewards
 - **Challenge Mode**: Set timed focus challenges with specific durations
-- **💚 Health System**: Your health decreases when distracted and regenerates while studying
+- **💚 Health System**: Your health decreases when distracted and regenerates while focused
 - **⏱️ Study Timer**: Tracks total study time with a clean, formatted display
 - **📹 Camera Detection**: AI-powered attention tracking using computer vision
 - **👀 3D Head Pose**: Tracks Pitch, Yaw, and Roll to detect looking down/away
@@ -86,7 +86,7 @@ All permissions can be managed in **System Settings > Privacy & Security**.
 
 ## 🎯 How It Works
 
-The tracker monitors your active window and classifies your activity as either **studying** or **distracted**:
+The tracker monitors your active window and classifies your activity as either **focused** or **distracted**:
 
 ### Study Apps (Earn XP + Health)
 - Code editors: VS Code, Cursor, Xcode, IntelliJ, PyCharm
@@ -107,9 +107,9 @@ The tracker monitors your active window and classifies your activity as either *
 - **Posture Warnings**: Get notified if you slouch for too long
 
 ### Rewards System
-- **+1 XP per second** of studying (multiplied by attention score)
+- **+1 XP per second** of focus time (multiplied by attention score)
 - **Level up** every 100 XP
-- **Health regenerates** slowly while studying (+0.1/sec)
+- **Health regenerates** slowly while focused (+0.1/sec)
 - **Health decreases** when distracted or away (-5.0/sec)
 
 ---
@@ -163,7 +163,7 @@ ai_study_tracker/
 
 ### Customizing Study/Distraction Keywords
 
-Edit `tracker.py` to modify what counts as studying:
+Edit `tracker.py` to modify what counts as focused work:
 
 ```python
 self.study_keywords = ['code', 'terminal', 'docs', 'pdf', 'canvas', 'notion', ...]
@@ -181,7 +181,7 @@ Edit `camera_config.json` (created after first run) to adjust:
 Edit `gamification.py` to change XP and health rates:
 
 ```python
-self.xp += 1  # XP per second of studying
+self.xp += 1  # XP per second of focus time
 self.health = min(100, self.health + 0.1)  # Health regen rate
 self.decrease_health(5.0)  # Health loss rate when distracted/away
 ```
@@ -194,8 +194,8 @@ The interface features:
   - Session timer
   - Health bar
   - XP progress
-  - Current status (Studying/Distracted/Away)
-- **Status Badge**: Real-time studying/distracted/away indicator
+  - Current status (Focused/Distracted/Away)
+- **Status Badge**: Real-time focused/distracted/away indicator
 - **Health Bar**: Visual health indicator with color coding
 - **Level Circle**: Displays current level with gradient background
 - **XP Counter**: Shows accumulated experience points

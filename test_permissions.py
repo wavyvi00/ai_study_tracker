@@ -20,7 +20,7 @@ if has_permission:
     
     # Test distraction detection
     is_studying = tracker.is_study_app(app_name, window_title)
-    print(f"\n  • Is Studying: {is_studying}")
+    print(f"\n  • Is Focused: {is_studying}")
     
 else:
     print("❌ FAILED: Accessibility permissions are missing!")

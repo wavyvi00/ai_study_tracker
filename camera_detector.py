@@ -127,17 +127,41 @@ class CameraDetector:
     
     def stop(self):
         """Stop camera and release resources"""
+        print("🛑 Stopping camera...")
         self.running = False
         self.enabled = False
         
-        if self.detection_thread:
+        # Wait for detection thread to finish
+        if self.detection_thread and self.detection_thread.is_alive():
             self.detection_thread.join(timeout=2)
             
+        # Release camera
         if self.camera:
-            self.camera.release()
-            self.camera = None
+            try:
+                self.camera.release()
+                self.camera = None
+            except Exception as e:
+                print(f"Error releasing camera: {e}")
+        
+        # Clean up MediaPipe resources
+        if HAS_MEDIAPIPE:
+            try:
+                if self.face_mesh:
+                    self.face_mesh.close()
+                if self.pose:
+                    self.pose.close()
+                if self.hands:
+                    self.hands.close()
+            except Exception as e:
+                print(f"Error closing MediaPipe: {e}")
+        
+        # Release OpenCV windows
+        try:
+            cv2.destroyAllWindows()
+        except:
+            pass
             
-        print("🛑 Camera stopped")
+        print("✅ Camera stopped successfully")
 
     def get_frame(self):
         """Get the latest frame for video streaming"""
@@ -162,6 +186,10 @@ class CameraDetector:
     
     def _detect_once(self):
         """Single detection frame with advanced analysis"""
+        # Check if still running before accessing camera
+        if not self.running or not self.enabled:
+            return None
+            
         if not self.camera or not self.camera.isOpened():
             return None
             
