@@ -1,4 +1,5 @@
 import platform
+import subprocess
 import time
 
 # Platform-specific imports
@@ -28,6 +29,64 @@ class WindowTracker:
         self.platform = platform.system()
         self.study_keywords = ['code', 'terminal', 'docs', 'pdf', 'canvas', 'notion', 'obsidian', 'cursor', 'xcode', 'intellij', 'pycharm']
         self.distraction_keywords = ['youtube', 'twitter', 'reddit', 'facebook', 'instagram', 'netflix', 'game']
+        self.accessibility_permission_checked = False
+        self.has_accessibility_permission = False
+    
+    def check_accessibility_permissions(self):
+        """
+        Check if Accessibility permissions are granted.
+        Returns (has_permission, error_message)
+        """
+        if self.platform != "Darwin":
+            return (True, None)  # Only needed on macOS
+        
+        try:
+            # Try to get window title - this requires Accessibility permissions
+            script = 'tell application "System Events" to get name of window 1 of (first application process whose frontmost is true)'
+            subprocess.check_output(['osascript', '-e', script], stderr=subprocess.PIPE)
+            self.has_accessibility_permission = True
+            return (True, None)
+        except subprocess.CalledProcessError as e:
+            error_msg = e.stderr.decode('utf-8') if e.stderr else str(e)
+            if 'not allowed assistive access' in error_msg:
+                self.has_accessibility_permission = False
+                return (False, "accessibility")
+            return (True, None)  # Other errors don't indicate permission issues
+        except Exception:
+            return (True, None)  # Assume permission is granted if we can't check
+    
+    def prompt_for_accessibility_permissions(self):
+        """
+        Display a message prompting the user to grant Accessibility permissions
+        and optionally open System Settings.
+        """
+        print("\n" + "="*70)
+        print("⚠️  ACCESSIBILITY PERMISSIONS REQUIRED")
+        print("="*70)
+        print("\nThe AI Study Tracker needs Accessibility permissions to detect")
+        print("which apps and websites you're using (e.g., YouTube, Instagram).")
+        print("\n📋 HOW TO GRANT PERMISSIONS:")
+        print("   1. Open System Settings → Privacy & Security → Accessibility")
+        print("   2. Click the '+' button")
+        print("   3. Add 'Terminal' (or your Python app)")
+        print("   4. Restart this application")
+        print("\n💡 TIP: I can open System Settings for you!")
+        print("="*70)
+        
+        try:
+            response = input("\nOpen System Settings now? (y/n): ").strip().lower()
+            if response == 'y':
+                # Open System Settings to Privacy & Security
+                subprocess.run(['open', 'x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility'])
+                print("\n✅ Opening System Settings...")
+                print("   After granting permissions, please restart this app.\n")
+                return True
+        except KeyboardInterrupt:
+            print("\n")
+        except Exception as e:
+            print(f"\n⚠️  Could not open System Settings: {e}")
+        
+        return False
         
     def get_active_window(self):
         """Returns (app_name, window_title, has_permissions)"""
@@ -63,9 +122,19 @@ class WindowTracker:
         try:
             # Use AppleScript to get the window title of the frontmost app
             script = 'tell application "System Events" to get name of window 1 of (first application process whose frontmost is true)'
-            result = subprocess.check_output(['osascript', '-e', script], stderr=subprocess.DEVNULL).decode('utf-8').strip()
+            result = subprocess.check_output(['osascript', '-e', script], stderr=subprocess.PIPE).decode('utf-8').strip()
             return result
-        except:
+        except subprocess.CalledProcessError as e:
+            error_msg = e.stderr.decode('utf-8') if e.stderr else str(e)
+            if 'not allowed assistive access' in error_msg:
+                print("⚠️  PERMISSION ERROR: Terminal/Python needs Accessibility permissions!")
+                print("   Go to: System Settings → Privacy & Security → Accessibility")
+                print("   Add Terminal (or your Python app) to the allowed list.")
+            else:
+                print(f"Error getting window title: {error_msg}")
+            return None
+        except Exception as e:
+            print(f"Unexpected error getting window title: {e}")
             return None
 
     def _get_active_app_name_macos(self):
@@ -74,7 +143,7 @@ class WindowTracker:
             # Use AppleScript to get the name of the frontmost app
             # This is more reliable than NSWorkspace for some things
             script = 'tell application "System Events" to get name of (first application process whose frontmost is true)'
-            result = subprocess.check_output(['osascript', '-e', script], stderr=subprocess.DEVNULL).decode('utf-8').strip()
+            result = subprocess.check_output(['osascript', '-e', script], stderr=subprocess.PIPE).decode('utf-8').strip()
             
             # Filter out our own app wrapper
             if result in ["Python", "antigravity", "AI Study Tracker", "StudyWin"]:
@@ -84,7 +153,17 @@ class WindowTracker:
                     return win_title
             
             return result
-        except:
+        except subprocess.CalledProcessError as e:
+            error_msg = e.stderr.decode('utf-8') if e.stderr else str(e)
+            if 'not allowed assistive access' in error_msg:
+                print("⚠️  PERMISSION ERROR: Terminal/Python needs Accessibility permissions!")
+                print("   Go to: System Settings → Privacy & Security → Accessibility")
+                print("   Add Terminal (or your Python app) to the allowed list.")
+            else:
+                print(f"Error getting app name: {error_msg}")
+            return None
+        except Exception as e:
+            print(f"Unexpected error getting app name: {e}")
             return None
 
     def is_study_app(self, app_name, window_title):
@@ -103,7 +182,7 @@ class WindowTracker:
                 return False
                 
         # Default to True if no distraction found (permissive mode)
-        # print(f"DEBUG: No keywords matched, defaulting to True for: {combined}")
+        print(f"DEBUG: No keywords matched, defaulting to True for: {combined}")
         return True
 
     def _get_active_window_windows(self):

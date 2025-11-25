@@ -68,11 +68,19 @@ This will:
 
 ### First Launch
 
-On first launch, macOS will prompt you for:
-- **Camera Access**: Required for attention detection and posture monitoring
-- **Screen Recording**: Required for tracking active applications
+On first launch, the app will automatically check for required permissions:
 
-Grant these permissions in **System Settings > Privacy & Security**.
+**Automatic Checks:**
+- **Accessibility**: The app will prompt you if this permission is missing and can open System Settings for you
+- **Camera Access**: Required for attention detection and posture monitoring (prompted by macOS)
+- **Screen Recording**: Required for tracking active applications (prompted by macOS)
+
+**If you see a permission prompt:**
+- The app will ask: `Open System Settings now? (y/n)`
+- Type `y` to automatically open the correct settings page
+- Grant the permission and restart the app
+
+All permissions can be managed in **System Settings > Privacy & Security**.
 
 ---
 

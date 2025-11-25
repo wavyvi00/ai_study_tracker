@@ -65,7 +65,9 @@ current_state = {
     "posture_warning": False,
     "break_reminder": False,
     "time_until_break": 0,
-    "session_paused": False
+    "session_paused": False,
+    # Auto-stop results (for health depletion or challenge completion)
+    "auto_stop_results": None
 }
 
 def update_loop():
@@ -116,10 +118,12 @@ def update_loop():
             
             # Only track window activity if session is active
             if game_engine.session_active:
+                print(f"🔍 SESSION ACTIVE - Starting window check")
                 # 1. Get Active Window
                 app_name, window_title, has_permissions = tracker.get_active_window()
                 
                 # 2. Check if Studying
+                print(f"DEBUG: Checking window - App: {app_name}, Title: {window_title}")
                 is_studying = tracker.is_study_app(app_name, window_title)
                 
                 # Override if phone detected by camera
@@ -133,12 +137,16 @@ def update_loop():
                 # 4. Check if health depleted (auto-fail session)
                 if game_engine.is_health_depleted():
                     print("Health depleted! Session failed.")
-                    game_engine.stop_session()
+                    session_data = game_engine.stop_session()
+                    # Store results for frontend to retrieve
+                    current_state["auto_stop_results"] = session_data
                 
                 # 5. Check if challenge mode session is complete
                 if game_engine.is_session_complete():
                     print("Challenge mode session complete! Auto-stopping.")
-                    game_engine.stop_session()
+                    session_data = game_engine.stop_session()
+                    # Store results for frontend to retrieve
+                    current_state["auto_stop_results"] = session_data
                 
                 # 6. Update Global State
                 current_state["app_name"] = app_name
@@ -236,6 +244,9 @@ def start_session():
 def stop_session():
     """Stop the current session"""
     try:
+        # Clear any pending auto-stop results
+        current_state["auto_stop_results"] = None
+        
         # Get session data before stopping
         session_data = game_engine.stop_session()
         
@@ -345,6 +356,17 @@ def hud():
     return render_template('hud.html')
 
 if __name__ == '__main__':
+    # Check for Accessibility permissions on macOS
+    print("\n🚀 Starting AI Study Tracker...")
+    has_permission, error_type = tracker.check_accessibility_permissions()
+    
+    if not has_permission and error_type == "accessibility":
+        tracker.prompt_for_accessibility_permissions()
+        print("\n⚠️  Starting app with limited functionality...")
+        print("   Window detection will not work until permissions are granted.\n")
+    elif has_permission:
+        print("✅ Accessibility permissions: Granted")
+    
     # Load camera config
     try:
         with open('camera_config.json', 'r') as f:
@@ -355,5 +377,9 @@ if __name__ == '__main__':
     # Start camera if enabled in config
     if camera_config.get('enabled', False):
         camera_detector.start()
+    
+    print(f"🌐 Server running on http://localhost:5002")
+    print(f"📊 HUD available at http://localhost:5002/hud")
+    print(f"🎥 Dev Mode at http://localhost:5002/dev_mode\n")
         
     app.run(port=5002, debug=True, use_reloader=False)

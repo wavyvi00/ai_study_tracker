@@ -6,7 +6,7 @@
   "build": {
     "frontendDist": "../public",
     "devUrl": "http://127.0.0.1:5002",
-    "beforeDevCommand": "python3 app.py",
+    "beforeDevCommand": "source venv/bin/activate && python3 app.py",
     "beforeBuildCommand": "echo No build step needed"
   },
   "app": {

@@ -203,26 +203,46 @@ class CameraDetector:
     def _advanced_detection(self, frame):
         """Advanced detection with MediaPipe"""
         # print("DEBUG: Running advanced detection...")
-        if frame is None or frame.size == 0:
+        
+        # Comprehensive frame validation
+        if frame is None:
+            return None
+        
+        if not isinstance(frame, np.ndarray):
+            return None
+            
+        if frame.size == 0:
             return None
         
         # Validate frame dimensions
         if len(frame.shape) != 3 or frame.shape[2] != 3:
             print("DEBUG: Invalid frame shape, skipping")
             return None
+        
+        # Validate frame is not corrupted
+        if frame.shape[0] < 10 or frame.shape[1] < 10:
+            return None
             
-        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        try:
+            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        except Exception as e:
+            print(f"DEBUG: Color conversion error: {e}")
+            return None
         
         # Ensure frame is writable for MediaPipe
         rgb_frame.flags.writeable = False
         
         # Process with face mesh and pose - wrap in try/except for safety
         try:
+            # Validate rgb_frame before passing to MediaPipe
+            if rgb_frame is None or rgb_frame.size == 0:
+                return None
+                
             face_results = self.face_mesh.process(rgb_frame)
             pose_results = self.pose.process(rgb_frame)
             hand_results = self.hands.process(rgb_frame)
         except Exception as e:
-            print(f"DEBUG: MediaPipe processing error: {e}")
+            # Silently skip this frame on any MediaPipe error
             return None
         
             # Run YOLO detection periodically (every 3 frames ~ 0.3 sec)

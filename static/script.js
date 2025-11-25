@@ -319,11 +319,26 @@ function formatTime(seconds) {
 
 let sessionWasActive = false;
 let lastSessionComplete = false;
+let autoStopResultsShown = false; // Track if we've shown auto-stop results
 
 function updateStatus() {
     fetch('/api/status')
         .then(response => response.json())
         .then(data => {
+            // Check if there are auto-stop results (health depleted or challenge complete)
+            if (data.auto_stop_results && !autoStopResultsShown) {
+                // Session was auto-stopped, show results
+                showResults(data.auto_stop_results);
+                autoStopResultsShown = true;
+                // Clear the results on backend
+                fetch('/api/session/stop', { method: 'POST' }).catch(() => { });
+            }
+
+            // Reset flag when session becomes active again
+            if (data.session_active) {
+                autoStopResultsShown = false;
+            }
+
             // Toggle between mode selection and session view
             const modeSelection = document.getElementById('mode-selection');
             const resultsOverlay = document.getElementById('session-results');
