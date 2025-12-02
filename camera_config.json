@@ -1,6 +1,6 @@
 {
     "enabled": false,
-    "auto_pause_enabled": true,
+    "auto_pause_enabled": false,
     "posture_warnings_enabled": true,
     "posture_warning_interval_minutes": 10,
     "break_reminders_enabled": true,

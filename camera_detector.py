@@ -59,24 +59,19 @@ class CameraDetector:
             self.face_mesh = self.mp_face_mesh.FaceMesh(
                 max_num_faces=1,
                 refine_landmarks=True,
-                min_detection_confidence=0.5,
-                min_tracking_confidence=0.5
+                min_detection_confidence=0.3,  # Lowered for low-light
+                min_tracking_confidence=0.3    # Lowered for low-light
             )
             
             self.pose = self.mp_pose.Pose(
-                min_detection_confidence=0.5,
-                min_tracking_confidence=0.5
+                min_detection_confidence=0.3,  # Lowered for low-light
+                min_tracking_confidence=0.3    # Lowered for low-light
             )
             
             self.hands = self.mp_hands.Hands(
                 max_num_hands=2,
-                min_detection_confidence=0.5,
-                min_tracking_confidence=0.5
-            )
-            self.hands = self.mp_hands.Hands(
-                max_num_hands=2,
-                min_detection_confidence=0.5,
-                min_tracking_confidence=0.5
+                min_detection_confidence=0.3,  # Lowered for low-light
+                min_tracking_confidence=0.3    # Lowered for low-light
             )
         else:
             self.face_mesh = None
@@ -98,7 +93,10 @@ class CameraDetector:
             
         self.frame_count = 0
         self.last_phone_detected = False
+        self.last_phone_detected = False
         self.phone_bbox = None
+        self.consecutive_failures = 0
+        self.max_failures = 10
         
     def start(self):
         """Start camera capture in background thread"""
@@ -128,30 +126,48 @@ class CameraDetector:
     def stop(self):
         """Stop camera and release resources"""
         print("🛑 Stopping camera...")
+        
+        # Set flags first to stop detection loop
         self.running = False
         self.enabled = False
         
-        # Wait for detection thread to finish
+        # Wait for detection thread to finish with a timeout
         if self.detection_thread and self.detection_thread.is_alive():
-            self.detection_thread.join(timeout=2)
+            self.detection_thread.join(timeout=1.0)
             
-        # Release camera
+        # Release camera first
         if self.camera:
             try:
                 self.camera.release()
-                self.camera = None
             except Exception as e:
                 print(f"Error releasing camera: {e}")
+            finally:
+                self.camera = None
         
-        # Clean up MediaPipe resources
+        # Clean up MediaPipe resources - be defensive
         if HAS_MEDIAPIPE:
             try:
-                if self.face_mesh:
-                    self.face_mesh.close()
-                if self.pose:
-                    self.pose.close()
-                if self.hands:
-                    self.hands.close()
+                # Only close if they were initialized
+                if hasattr(self, 'face_mesh') and self.face_mesh is not None:
+                    try:
+                        self.face_mesh.close()
+                    except:
+                        pass
+                    self.face_mesh = None
+                    
+                if hasattr(self, 'pose') and self.pose is not None:
+                    try:
+                        self.pose.close()
+                    except:
+                        pass
+                    self.pose = None
+                    
+                if hasattr(self, 'hands') and self.hands is not None:
+                    try:
+                        self.hands.close()
+                    except:
+                        pass
+                    self.hands = None
             except Exception as e:
                 print(f"Error closing MediaPipe: {e}")
         
@@ -179,7 +195,7 @@ class CameraDetector:
                 detection = self._detect_once()
                 if detection:
                     self.last_detection = detection
-                time.sleep(0.05)  # 20 fps
+                time.sleep(0.1)  # 10 fps (sufficient for attention tracking)
             except Exception as e:
                 print(f"Detection error: {e}")
                 time.sleep(1)
@@ -191,11 +207,25 @@ class CameraDetector:
             return None
             
         if not self.camera or not self.camera.isOpened():
+            print("DEBUG: Camera not opened in _detect_once")
             return None
             
         ret, frame = self.camera.read()
         if not ret:
-            print("DEBUG: Failed to read frame from camera")
+            self.consecutive_failures += 1
+            print(f"DEBUG: Failed to read frame (Attempt {self.consecutive_failures}/{self.max_failures})")
+            if self.consecutive_failures >= self.max_failures:
+                print("❌ Too many camera failures. Restarting camera...")
+                self.stop()
+                time.sleep(1)
+                self.start()
+                self.consecutive_failures = 0
+            return None
+            
+        self.consecutive_failures = 0 # Reset on success
+            
+        if frame is None:
+            print("DEBUG: Frame is None")
             return None
             
         # Store frame for debug view (thread-safe)
@@ -211,20 +241,30 @@ class CameraDetector:
     def _basic_detection(self, frame):
         """Basic face detection fallback"""
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        
+        # Enhance contrast for better low-light detection
+        gray = cv2.equalizeHist(gray)
+        
+        # More sensitive detection for low-light conditions
         faces = self.face_cascade.detectMultiScale(
             gray,
-            scaleFactor=1.3,
-            minNeighbors=5,
-            minSize=(30, 30)
+            scaleFactor=1.1,  # Lower = more sensitive
+            minNeighbors=3,    # Lower = more detections (but more false positives)
+            minSize=(20, 20),  # Smaller minimum size
+            flags=cv2.CASCADE_SCALE_IMAGE
         )
         
+        detected = len(faces) > 0
+        # if detected:
+        #     print(f"✅ Face detected (basic mode): {len(faces)} face(s)")
+        
         return {
-            'present': len(faces) > 0,
+            'present': detected,
             'face_count': len(faces),
-            'attention_score': 50 if len(faces) > 0 else 0,
-            'looking_at_screen': len(faces) > 0,
+            'attention_score': 50 if detected else 0,
+            'looking_at_screen': detected,
             'timestamp': datetime.now().isoformat(),
-            'confidence': 0.6 if len(faces) > 0 else 0.2,
+            'confidence': 0.6 if detected else 0.2,
             'method': 'basic'
         }
     
@@ -265,6 +305,10 @@ class CameraDetector:
             # Validate rgb_frame before passing to MediaPipe
             if rgb_frame is None or rgb_frame.size == 0:
                 return None
+            
+            # Check if MediaPipe objects are still valid (not closed during shutdown)
+            if not self.running or self.face_mesh is None or self.pose is None or self.hands is None:
+                return None
                 
             face_results = self.face_mesh.process(rgb_frame)
             pose_results = self.pose.process(rgb_frame)
@@ -297,6 +341,13 @@ class CameraDetector:
         # Get landmarks if present
         face_landmarks = face_results.multi_face_landmarks[0] if present else None
         pose_landmarks = pose_results.pose_landmarks if pose_results else None
+        
+        # Debug output (rate limited)
+        if self.frame_count % 30 == 0: # Log once every ~3 seconds
+            if present:
+                print(f"✅ Face detected (advanced mode): Score={final_score}, Looking={looking_at_screen}")
+            else:
+                print(f"❌ No face detected (advanced mode)")
         
         # Draw debug info on the stored frame
         if self.debug_frame is not None:
@@ -632,18 +683,28 @@ class CameraDetector:
         if not self.enabled:
             return {
                 'enabled': False,
-                'present': None,
+                'present': False,
                 'attention_score': 0,
                 'message': 'Camera disabled'
             }
-        
+            
         if not self.last_detection:
-            return {
-                'enabled': True,
-                'present': None,
-                'attention_score': 0,
-                'message': 'Starting camera...'
-            }
+            # Check if we've been waiting too long
+            if hasattr(self, 'detection_thread') and self.detection_thread.is_alive():
+                # If it's been more than 5 seconds since start (we can approximate or just say "Initializing...")
+                return {
+                    'enabled': True,
+                    'present': None,
+                    'attention_score': 0,
+                    'message': 'Initializing camera...'
+                }
+            else:
+                return {
+                    'enabled': True,
+                    'present': None,
+                    'attention_score': 0,
+                    'message': 'Camera error'
+                }
         
         return {
             'enabled': True,

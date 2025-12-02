@@ -4,3 +4,5 @@ opencv-python==4.10.0.84
 mediapipe==0.10.9
 pyinstaller==6.3.0
 ultralytics==8.3.39
+numpy
+

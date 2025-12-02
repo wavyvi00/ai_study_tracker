@@ -94,19 +94,123 @@
         </div>
 
         <div class="status-panel">
-            <h2>Real-time Analysis</h2>
+            <h2>🧠 AI Insights</h2>
+            <div id="ai-insights" style="margin-bottom: 20px;">
+                <div class="insight-row">
+                    <strong>Source:</strong> <span id="ai-source">Waiting...</span>
+                </div>
+                <div class="insight-row">
+                    <strong>Verdict:</strong> <span id="ai-verdict" class="badge">Unknown</span>
+                </div>
+                <div class="insight-row">
+                    <strong>Confidence:</strong>
+                    <div class="progress-bar">
+                        <div id="ai-confidence" class="progress-fill" style="width: 0%">0%</div>
+                    </div>
+                </div>
+                <div class="insight-row">
+                    <strong>Reason:</strong> <span id="ai-reason" style="font-size: 0.9em; color: #aaa;">-</span>
+                </div>
+                <div id="grace-period-box"
+                    style="display: none; margin-top: 10px; padding: 10px; background: #d35400; border-radius: 5px;">
+                    🛡️ Grace Period: <span id="grace-timer">0</span>s
+                </div>
+            </div>
+
+            <h2>📷 Camera Status</h2>
             <div id="calibration-status" style="margin-bottom: 10px; padding: 10px; border-radius: 5px; display: none;">
             </div>
             <pre id="status-json">Loading...</pre>
         </div>
     </div>
 
+    <style>
+        .insight-row {
+            margin-bottom: 10px;
+        }
+
+        .badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        .badge-focused {
+            background: #27ae60;
+            color: white;
+        }
+
+        .badge-distracted {
+            background: #c0392b;
+            color: white;
+        }
+
+        .badge-searching {
+            background: #f39c12;
+            color: white;
+        }
+
+        .progress-bar {
+            width: 100%;
+            background: #444;
+            height: 20px;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #3498db;
+            text-align: center;
+            font-size: 12px;
+            line-height: 20px;
+            transition: width 0.3s;
+        }
+    </style>
+
     <script>
         function updateStatus() {
+            // Fetch Camera Status
             fetch('/api/camera/status')
                 .then(response => response.json())
                 .then(data => {
                     document.getElementById('status-json').textContent = JSON.stringify(data, null, 2);
+                })
+                .catch(err => console.error(err));
+
+            // Fetch AI Status (from main status endpoint)
+            fetch('/api/status')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.ai_debug_info) {
+                        const info = data.ai_debug_info;
+
+                        // Update Source
+                        document.getElementById('ai-source').textContent = info.source;
+
+                        // Update Verdict
+                        const verdictEl = document.getElementById('ai-verdict');
+                        verdictEl.textContent = info.raw_state.toUpperCase();
+                        verdictEl.className = 'badge badge-' + info.raw_state;
+
+                        // Update Confidence
+                        const confEl = document.getElementById('ai-confidence');
+                        confEl.style.width = info.confidence + '%';
+                        confEl.textContent = info.confidence + '%';
+
+                        // Update Reason
+                        document.getElementById('ai-reason').textContent = info.reason;
+
+                        // Update Grace Period
+                        const graceBox = document.getElementById('grace-period-box');
+                        if (info.grace_period_active) {
+                            graceBox.style.display = 'block';
+                            document.getElementById('grace-timer').textContent = info.grace_period_remaining;
+                        } else {
+                            graceBox.style.display = 'none';
+                        }
+                    }
                 })
                 .catch(err => console.error(err));
         }

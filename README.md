@@ -13,6 +13,8 @@ A gamified productivity tracker that helps you stay focused and level up your st
 - **Challenge Mode**: Set timed focus challenges with specific durations
 - **💚 Health System**: Your health decreases when distracted and regenerates while focused
 - **⏱️ Study Timer**: Tracks total study time with a clean, formatted display
+- **🧠 AI Distraction Detector**: Uses a lightweight DistilBERT model (ONNX) to intelligently classify activity as "Focused", "Searching", or "Distracted" based on window titles and content.
+- **🛡️ Grace Period**: Intelligent 15-second buffer allows for brief distractions or research without penalty.
 - **📹 Camera Detection**: AI-powered attention tracking using computer vision
 - **👀 3D Head Pose**: Tracks Pitch, Yaw, and Roll to detect looking down/away
 - **📱 Phone Detection**: Detects if you are using your phone (YOLO-based detection)
@@ -21,7 +23,7 @@ A gamified productivity tracker that helps you stay focused and level up your st
 - **🖥️ Native Desktop App**: Beautiful native macOS window powered by Tauri
 - **📊 Always-On-Top HUD**: Minimal overlay showing health, XP, and status
 - **🎨 Modern UI**: Sleek dark mode interface with smooth animations
-- **🔒 Privacy-First**: All processing is local; no video leaves your device
+- **🔒 Privacy-First**: All processing is local (ONNX + OpenCV); no data leaves your device.
 
 ---
 
@@ -46,6 +48,8 @@ A gamified productivity tracker that helps you stay focused and level up your st
    source venv/bin/activate
    pip install -r requirements.txt
    ```
+
+   *Note: On first run, the app will automatically download the AI model (~80MB).*
 
 3. **Install Tauri CLI**
    ```bash
@@ -86,20 +90,18 @@ All permissions can be managed in **System Settings > Privacy & Security**.
 
 ## 🎯 How It Works
 
-The tracker monitors your active window and classifies your activity as either **focused** or **distracted**:
+The tracker monitors your active window and classifies your activity using a **Hybrid AI System**:
 
-### Study Apps (Earn XP + Health)
-- Code editors: VS Code, Cursor, Xcode, IntelliJ, PyCharm
-- Learning platforms: Canvas, Notion, Obsidian
-- Documentation: PDF viewers, docs
-- Development tools: Terminal
+### 1. AI Inference Engine 🧠
+- Uses a **DistilBERT** model converted to **ONNX** for fast, offline inference.
+- Analyzes window titles and app names to understand context (e.g., "Introduction to Calculus - YouTube" vs "Funny Cat Videos - YouTube").
+- **Grace Period**: If you switch to a distraction, you have **15 seconds** to switch back before losing health.
 
-### Distraction Apps (Lose Health)
-- Social media: YouTube, Twitter, Reddit, Facebook, Instagram
-- Entertainment: Netflix, games
-- Other non-productive apps
+### 2. Rule-Based Fallback ⚡
+- Instant detection for known study apps (VS Code, Terminal, Notion).
+- Instant penalties for known distractions (Netflix, Games).
 
-### Camera Intelligence 🧠
+### 3. Camera Intelligence 👁️
 - **Attention Score**: 0-100 score based on face orientation and gaze
 - **XP Multiplier**: Earn up to **1.0x XP** when focused, drops to **0.5x** when distracted
 - **User Away Detection**: Status shows "Away" when you leave your desk
@@ -135,7 +137,10 @@ Want to see what the AI sees?
 ```
 ai_study_tracker/
 ├── app.py                    # Flask application and API routes
-├── tracker.py                # macOS window tracking (Quartz)
+├── focus_detector.py         # Main focus logic controller (AI + Rules)
+├── ai_engine.py              # ONNX model inference
+├── rule_engine.py            # Keyword-based fallback logic
+├── window_provider.py        # OS-specific window detection
 ├── gamification.py           # XP, leveling, and health system
 ├── camera_detector.py        # Camera-based attention detection (MediaPipe + YOLO)
 ├── camera_integration.py     # Camera logic helper (Posture, Breaks)

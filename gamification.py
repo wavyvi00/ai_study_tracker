@@ -51,7 +51,8 @@ class GamificationEngine:
         print(f"DEBUG: Update - Focused: {is_studying}, Present: {user_present}, Health: {self.health}") # Debug log
         
         # If user is away, treat as not studying (distracted)
-        if not user_present:
+        # Treat None as True (assume present if camera disabled/initializing)
+        if user_present is False:
             is_studying = False
             self.session_paused = False # Ensure not paused
         else:
@@ -143,10 +144,14 @@ class GamificationEngine:
     
     def start_session(self, mode="normal", course=None, duration=0):
         """Start a new study session"""
+        import time as time_module
+        start_time = time_module.time()
+        
         # Check and update streak
         streak_before = self.current_streak
         current_streak = self.check_and_update_streak()
         streak_increased = current_streak > streak_before
+        print(f"⏱️ Streak check took: {(time_module.time() - start_time)*1000:.2f}ms")
         
         # Reset health to 100 for new session
         self.health = 100
@@ -163,7 +168,10 @@ class GamificationEngine:
         self.session_attention_scores = []
         self.session_paused = False
         
+        save_start = time_module.time()
         self.save_data()
+        print(f"⏱️ Save data took: {(time_module.time() - save_start)*1000:.2f}ms")
+        print(f"⏱️ Total start_session took: {(time_module.time() - start_time)*1000:.2f}ms")
         
         return {
             "streak": current_streak,

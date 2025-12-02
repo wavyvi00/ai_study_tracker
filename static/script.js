@@ -12,6 +12,7 @@ function clearCourseInput() {
 }
 
 function startNormalMode() {
+    console.trace("DEBUG: startNormalMode called"); // Trace who called this
     const course = getCourseInput();
 
     // Validate course is not empty
@@ -20,6 +21,12 @@ function startNormalMode() {
         document.getElementById('course-input').focus();
         return;
     }
+
+    console.log('Starting normal mode for course:', course);
+
+    // Disable the button to prevent multiple clicks
+    const modeCards = document.querySelectorAll('.mode-card');
+    modeCards.forEach(card => card.style.pointerEvents = 'none');
 
     fetch('/api/session/start', {
         method: 'POST',
@@ -31,17 +38,36 @@ function startNormalMode() {
             course: course
         })
     })
-        .then(response => response.json())
+        .then(response => {
+            console.log('Response status:', response.status);
+            return response.json();
+        })
         .then(data => {
+            console.log('Response data:', data);
             if (data.success) {
                 console.log('Normal mode started', data.course ? `for course: ${data.course}` : '');
                 clearCourseInput();
+                // Small delay to ensure backend state is fully updated
+                setTimeout(() => {
+                    console.log('Calling updateStatus() to refresh UI...');
+                    updateStatus();
+                }, 100); // 100ms delay
+            } else if (data.error) {
+                alert(`❌ Error starting session: ${data.error}`);
+                // Re-enable buttons on error
+                modeCards.forEach(card => card.style.pointerEvents = 'auto');
             }
         })
-        .catch(error => console.error('Error starting normal mode:', error));
+        .catch(error => {
+            console.error('Error starting normal mode:', error);
+            alert('❌ Failed to start session. Check console for details.');
+            // Re-enable buttons on error
+            modeCards.forEach(card => card.style.pointerEvents = 'auto');
+        });
 }
 
 function startChallengeMode(minutes) {
+    console.trace("DEBUG: startChallengeMode called"); // Trace who called this
     const duration = minutes * 60; // Convert to seconds
     const course = getCourseInput();
 
@@ -51,6 +77,12 @@ function startChallengeMode(minutes) {
         document.getElementById('course-input').focus();
         return;
     }
+
+    console.log(`Starting challenge mode: ${minutes} minutes for course:`, course);
+
+    // Disable the buttons to prevent multiple clicks
+    const modeCards = document.querySelectorAll('.mode-card, .challenge-mode-card');
+    modeCards.forEach(card => card.style.pointerEvents = 'none');
 
     fetch('/api/session/start', {
         method: 'POST',
@@ -63,14 +95,32 @@ function startChallengeMode(minutes) {
             course: course
         })
     })
-        .then(response => response.json())
+        .then(response => {
+            console.log('Response status:', response.status);
+            return response.json();
+        })
         .then(data => {
+            console.log('Response data:', data);
             if (data.success) {
                 console.log(`Challenge mode started: ${minutes} minutes`, data.course ? `for course: ${data.course}` : '');
                 clearCourseInput();
+                // Small delay to ensure backend state is fully updated
+                setTimeout(() => {
+                    console.log('Calling updateStatus() to refresh UI...');
+                    updateStatus();
+                }, 100); // 100ms delay
+            } else if (data.error) {
+                alert(`❌ Error starting session: ${data.error}`);
+                // Re-enable buttons on error
+                modeCards.forEach(card => card.style.pointerEvents = 'auto');
             }
         })
-        .catch(error => console.error('Error starting challenge mode:', error));
+        .catch(error => {
+            console.error('Error starting challenge mode:', error);
+            alert('❌ Failed to start session. Check console for details.');
+            // Re-enable buttons on error
+            modeCards.forEach(card => card.style.pointerEvents = 'auto');
+        });
 }
 
 function stopSession() {
@@ -219,6 +269,10 @@ function dismissResults() {
     // Switch back to mode selection
     document.getElementById('active-session').style.display = 'none';
     document.getElementById('mode-selection').style.display = 'block';
+
+    // Re-enable buttons
+    const modeCards = document.querySelectorAll('.mode-card, .challenge-mode-card');
+    modeCards.forEach(card => card.style.pointerEvents = 'auto');
 }
 
 function showChallengeFailed(results) {
@@ -356,7 +410,12 @@ function updateStatus() {
                 // This prevents switching away when health fails or challenge fails
                 modeSelection.style.display = 'block';
                 document.getElementById('active-session').style.display = 'none';
+                document.getElementById('active-session').style.display = 'none';
                 sessionWasActive = false;
+
+                // Re-enable buttons when showing mode selection
+                const modeCards = document.querySelectorAll('.mode-card, .challenge-mode-card');
+                modeCards.forEach(card => card.style.pointerEvents = 'auto');
             } else {
                 // Results are showing but session ended - keep session view visible
                 // so results overlay can be seen
@@ -498,26 +557,26 @@ function updateStatus() {
 
             if (data.session_active) {
                 if (data.user_present === false) {
-                    statusBadge.className = 'status-badge distracted';
-                    statusText.textContent = 'Away';
-                    statusIcon.textContent = '👻';
-                    statusMessage.textContent = 'User away';
+                    if (statusBadge) {
+                        statusBadge.className = 'status-badge distracted';
+                        statusBadge.textContent = '👻 User away';
+                    }
                 } else if (data.is_studying) {
-                    statusBadge.className = 'status-badge studying';
-                    statusText.textContent = 'Focused';
-                    statusIcon.textContent = '🧠';
-                    statusMessage.textContent = 'Keep up the good work!';
+                    if (statusBadge) {
+                        statusBadge.className = 'status-badge studying';
+                        statusBadge.textContent = '🧠 Focused';
+                    }
                 } else {
-                    statusBadge.className = 'status-badge distracted';
-                    statusText.textContent = 'Distracted';
-                    statusIcon.textContent = '⚠️';
-                    statusMessage.textContent = 'Get back to work!';
+                    if (statusBadge) {
+                        statusBadge.className = 'status-badge distracted';
+                        statusBadge.textContent = '⚠️ Distracted';
+                    }
                 }
             } else {
-                statusBadge.className = 'status-badge idle';
-                statusText.textContent = 'Idle';
-                statusIcon.textContent = '💤';
-                statusMessage.textContent = 'Ready to start a session?';
+                if (statusBadge) {
+                    statusBadge.className = 'status-badge idle';
+                    statusBadge.textContent = '💤 Idle';
+                }
             }
 
             // Update Health
@@ -734,3 +793,8 @@ function stopCameraStatusPolling() {
     }
 }
 
+
+// Debugging: Log window state changes to find the culprit
+window.addEventListener('blur', () => console.log('DEBUG: Window blurred'));
+window.addEventListener('focus', () => console.log('DEBUG: Window focused'));
+document.addEventListener('visibilitychange', () => console.log('DEBUG: Visibility changed:', document.visibilityState));

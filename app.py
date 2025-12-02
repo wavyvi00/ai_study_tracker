@@ -1,5 +1,5 @@
 from flask import Flask, render_template, jsonify, request, Response
-from tracker import WindowTracker
+from focus_detector import FocusDetector
 from gamification import GamificationEngine
 from courses import CourseManager
 from session_history import SessionHistory
@@ -25,7 +25,7 @@ log.setLevel(logging.ERROR)
 app = Flask(__name__)
 
 # Initialize Core Logic
-tracker = WindowTracker()
+focus_detector = FocusDetector()
 game_engine = GamificationEngine()
 course_manager = CourseManager()
 session_history = SessionHistory()
@@ -69,7 +69,16 @@ current_state = {
     "time_until_break": 0,
     "session_paused": False,
     # Auto-stop results (for health depletion or challenge completion)
-    "auto_stop_results": None
+    "auto_stop_results": None,
+    # AI Debug Info
+    "ai_debug_info": {
+        "source": "Waiting...",
+        "confidence": 0,
+        "raw_state": "unknown",
+        "reason": "",
+        "grace_period_active": False,
+        "grace_period_remaining": 0
+    }
 }
 
 def update_loop():
@@ -78,11 +87,18 @@ def update_loop():
         try:
             # Get camera status if enabled
             camera_status = camera_detector.get_status()
-            user_present = True  # Default to present
+            user_present = True  # Default to present (assume user is there unless proven otherwise)
             attention_multiplier = 1.0  # Default multiplier
             
             if camera_status['enabled']:
-                user_present = camera_status.get('present', True)
+                # Only mark as away if camera explicitly detects absence
+                # If camera can't detect (low light, etc.), assume present
+                detected_present = camera_status.get('present')
+                if detected_present is False:  # Explicitly False, not None
+                    user_present = False
+                else:
+                    user_present = True  # Default to present if detection is uncertain
+                    
                 attention_score = camera_status.get('attention_score', 0)
                 attention_multiplier = calculate_attention_multiplier(attention_score)
                 
@@ -121,25 +137,90 @@ def update_loop():
             # Only track window activity if session is active
             if game_engine.session_active:
                 print(f"🔍 SESSION ACTIVE - Starting window check")
-                # 1. Get Active Window
-                app_name, window_title, has_permissions = tracker.get_active_window()
                 
-                # 2. Check if Focused
-                print(f"DEBUG: Checking window - App: {app_name}, Title: {window_title}")
-                is_studying = tracker.is_study_app(app_name, window_title)
+                try:
+                    # Fall back to window tracking (New AI System)
+                    # 1. Get Focus State
+                    focus_result = focus_detector.get_focus_state()
+                    
+                    app_name = focus_result['app_name']
+                    window_title = focus_result['window_title']
+                    has_permissions = focus_result['has_permissions']
+                    state = focus_result['state']
+                    reason = focus_result['reason']
+                    
+                    print(f"DEBUG: Focus Check - State: {state}, App: {app_name}, Title: {window_title}, Reason: {reason}")
+                    
+                    # Update AI Debug Info (with safe attribute access)
+                    grace_remaining = 0
+                    if hasattr(focus_detector, 'in_grace_period') and focus_detector.in_grace_period:
+                        if hasattr(focus_detector, 'grace_period_start') and focus_detector.grace_period_start:
+                            grace_remaining = int(focus_detector.grace_period_duration - (time.time() - focus_detector.grace_period_start))
+                    
+                    current_state["ai_debug_info"] = {
+                        "source": focus_result.get('source', 'Unknown'),
+                        "confidence": int(focus_result.get('confidence', 0) * 100),
+                        "raw_state": state,
+                        "reason": reason,
+                        "grace_period_active": getattr(focus_detector, 'in_grace_period', False),
+                        "grace_period_remaining": max(0, grace_remaining)
+                    }
+                except Exception as e:
+                    print(f"❌ ERROR in focus detection: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    # Fallback to safe defaults
+                    app_name = "Error"
+                    window_title = "Focus detection failed"
+                    has_permissions = True
+                    state = "unknown"
+                    reason = f"Error: {str(e)}"
+                    is_studying = False
+
+                # 2. Map state to is_studying
+                if state == "focused":
+                    is_studying = True
+                elif state == "searching":
+                    is_studying = True # Treat searching as studying (or neutral)
+                    print(f"🔍 User is searching/researching - allowing grace period")
+                elif state == "distracted":
+                    is_studying = False
+                else:
+                    is_studying = False # Default to distracted if unknown
+                
+                # Skip update if window should be ignored (None = FocusWin HUD, etc.)
+                # Note: FocusDetector returns "unknown" or handles this? 
+                # We need to check if it's our own app.
+                if app_name in ["FocusWin", "StudyWin"]:
+                     is_studying = None # Trigger the ignore logic below
+
                 
                 # Skip update if window should be ignored (None = FocusWin HUD, etc.)
                 if is_studying is None:
-                    print(f"DEBUG: Skipping update for ignored window")
-                    continue
+                    print(f"DEBUG: Ignored window active - Updating UI but skipping game stats")
+                    # Treat as studying for UI purposes (so it shows "Focused" instead of "Distracted")
+                    is_studying = True
+                    
+                    # Update global state so UI reflects current app
+                    current_state["app_name"] = app_name
+                    current_state["window_title"] = window_title
+                    current_state["is_studying"] = True
+                    current_state["user_present"] = user_present
+                    
+                    # IMPORTANT: Do NOT call game_engine.update()
+                    # This prevents gaining XP/Health but also prevents losing it
+                    
+                    # Still update other state variables below...
+                else:
+                    # Override if phone detected by camera
+                    if camera_status.get('phone_detected', False):
+                        is_studying = False
+                        user_present = True # Force present so we penalize instead of pausing
+                    
+                    # 3. Update gamification with camera data
+                    game_engine.update(is_studying, attention_multiplier, user_present)
                 
-                # Override if phone detected by camera
-                if camera_status.get('phone_detected', False):
-                    is_studying = False
-                    user_present = True # Force present so we penalize instead of pausing
-                
-                # 3. Update gamification with camera data
-                game_engine.update(is_studying, attention_multiplier, user_present)
+                # 4. Check if health depleted (auto-fail session)
                 
                 # 4. Check if health depleted (auto-fail session)
                 if game_engine.is_health_depleted():
@@ -213,11 +294,12 @@ def cleanup():
     except Exception as e:
         print(f"Error stopping camera: {e}")
     print("✅ Cleanup complete")
+    # Force exit to prevent hanging
+    import sys
+    sys.exit(0)
 
 # Register cleanup handlers
 atexit.register(cleanup)
-signal.signal(signal.SIGINT, lambda sig, frame: (cleanup(), exit(0)))
-signal.signal(signal.SIGTERM, lambda sig, frame: (cleanup(), exit(0)))
 
 # Start background thread
 update_thread = threading.Thread(target=update_loop, daemon=True)
@@ -230,6 +312,14 @@ def index():
 @app.route('/api/status')
 def status():
     # print(f"API STATUS - Active: {current_state.get('session_active')}, Health: {current_state.get('health')}")
+    
+    # Force sync critical session state from game engine to ensure UI is snappy
+    current_state["session_active"] = game_engine.session_active
+    current_state["session_mode"] = game_engine.session_mode
+    current_state["current_course"] = game_engine.current_course
+    current_state["time_remaining"] = game_engine.get_session_time_remaining()
+    current_state["session_elapsed"] = game_engine.get_session_elapsed_time()
+    
     return jsonify(current_state)
 
 @app.route('/api/session/start', methods=['POST'])
@@ -258,6 +348,14 @@ def start_session():
         
         # Start session with correct parameter order: mode, course, duration
         game_engine.start_session(mode=mode, course=course, duration=duration)
+        
+        # Immediately update global state to reflect active session
+        current_state["session_active"] = True
+        current_state["session_mode"] = mode
+        current_state["current_course"] = course
+        current_state["app_name"] = "Ready" # Reset app name
+        current_state["window_title"] = "Session Started"
+        
         return jsonify({"success": True, "mode": mode, "duration": duration, "course": course})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -380,13 +478,17 @@ def hud():
 if __name__ == '__main__':
     # Check for Accessibility permissions on macOS
     print("\n🚀 Starting AI Study Tracker...")
-    has_permission, error_type = tracker.check_accessibility_permissions()
+    # Use the new provider to check permissions
+    provider = focus_detector.window_provider
+    has_permission = False
+    if hasattr(provider, 'check_permissions'):
+        has_permission = provider.check_permissions()
     
-    if not has_permission and error_type == "accessibility":
-        tracker.prompt_for_accessibility_permissions()
+    if not has_permission:
         print("\n⚠️  Starting app with limited functionality...")
         print("   Window detection will not work until permissions are granted.\n")
-    elif has_permission:
+        print("   Please grant Accessibility permissions to Terminal/Python in System Settings.\n")
+    else:
         print("✅ Accessibility permissions: Granted")
     
     # Load camera config
